@@ -7,6 +7,7 @@ import pycountry_convert as pc
 import datetime as dt
 import json
 import os.path
+import mysql.connector
 
 from Spider import task1
 from Spider_Pubchem import runMerged
@@ -87,6 +88,48 @@ def getPubchemData(sku, magento):
                 return item
 
     return None
+
+def getDatabase(host, user, password, database):
+    mydb = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        database=database
+    )
+
+    return mydb
+
+def getDatabaseData(mydb, sku, table_name):
+    cursor = mydb.cursor()
+    cursor.execute("SELECT * FROM " + table_name + " WHERE sku = '" + sku + "';")
+    result = cursor.fetchall()
+
+    if len(result) > 0:
+        return result[0]
+    else:
+        return None
+
+def getValueFromResult(mydb, result, val_name, table_name, mydb):
+    cursor = mydb.cursor()
+    cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + table_name + "';")
+    columns = cursor.fetchall()
+    index = 0
+    for i in columns:
+        if i[0] == val_name:
+            return result[index]
+        index += 1
+    
+    addColToDB
+
+def addColToDB(mydb, val_name, table_name):
+    cursor = mydb.cursor()
+    cursor.execute("ALTER TABLE " + table_name + " ADD " + val_name + " VARCHAR(300);")
+    cursor.execute("ALTER TABLE " + table_name + " ALTER " + val_name + " SET DEFAULT 'None';")
+    mydb.commit()
+
+# def addValToDB(mydb, sku, val_name, val):
+#     cursor = mydb.cursor()
+
 
 def chooseDataAbcam(data, product_info):
     if not product_info.empty:
@@ -1875,28 +1918,6 @@ def fillVWR_Enrichment(filename, magento):
 
     new_enrichment.save('outputs/enrichment_outputs/vwr_enrichment_output.xlsx')
     # new_enrichment.save('../../outputs/enrichment_outputs/vwr_enrichment_output.xlsx')
-
-# def fillVWR_Enrichment_Antibodies(filename, magento, prms):
-#     enrichment = pd.read_excel('forms/vwr_enrichment_antibodies.xlsx')
-#     enrichment.columns = np.arange(len(enrichment.columns))
-#     wb = opxl.load_workbook(filename)
-#     skus = wb.active
-#     for i in range(2, skus.max_row+1):
-#         enrichment.loc[i+1, 5] = str(skus['A'+str(i)].value)
-#     new_enrichment = opxl.load_workbook('forms/wr_enrichment_antibodies.xlsx')
-#     sheet = new_enrichment.active
-#     if sheet.max_row < skus.max_row:
-#         sheet.append([''])
-#         for j in range(skus.max_row - sheet.max_row + 4):
-#             sheet.insert_rows(sheet.max_row)
-#     i = 3
-#     for row in sheet.iter_rows(min_row=5):
-#         if i < (len(enrichment)+3):
-#             for j in range(len(enrichment.columns)):
-#                 row[j].value = enrichment[j][i]
-#         else:
-#             break
-#         i += 1
 
 def fillVWR_New(product_manager, prms2, e_marketing):
     vwr = pd.read_excel('forms/vwr_form.xlsx', dtype=object)
