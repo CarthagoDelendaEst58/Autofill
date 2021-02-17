@@ -131,6 +131,8 @@ def VWREnrichmentDriver(filename, magento, prms, magento_may, categories):
     sera.columns = np.arange(len(sera.columns))
     ccm.columns = np.arange(len(ccm.columns))
     chemicals.columns = np.arange(len(chemicals.columns))
+
+    categories.columns = categories.iloc[0]
     
     num_antibodies = 0
     num_ppe = 0
@@ -144,7 +146,7 @@ def VWREnrichmentDriver(filename, magento, prms, magento_may, categories):
         category_info = categories.loc[categories['SKU'] == sku]
 
         if not category_info.empty:
-            category = category_info['Class Name']
+            category = category_info['Class Name'].values[0]
         else:
             category = ''
 
@@ -156,9 +158,8 @@ def VWREnrichmentDriver(filename, magento, prms, magento_may, categories):
             cas_number = ''
 
         skus['B'+str(i)].value = ''
-
         if sku.startswith('11'):
-            if category == 'MEDIA' or sku.startswith('1130') or sku.startswith('1131') or sku.startswith('1133') or sku.startswith('1140') or sku.startswith('1141') or sku.startswith('1144') or sku.startswith('1145') or sku.startswith('1148') or sku.startswith('1151'):
+            if (category == 'MEDIA' or sku.startswith('1130') or sku.startswith('1131') or sku.startswith('1133') or sku.startswith('1140') or sku.startswith('1141') or sku.startswith('1144') or sku.startswith('1145') or sku.startswith('1148') or sku.startswith('1151')):
                 skus['B'+str(i)].value = catSheetVWR('Cell Culture Media', skus['B'+str(i)].value)
                 ccm.loc[num_ccm+12, 4] = sku
                 num_ccm = num_ccm + 1
