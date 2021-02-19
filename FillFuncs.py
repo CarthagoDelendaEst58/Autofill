@@ -150,6 +150,8 @@ def getValueFromResult(mydb, result, val_name, table_name):
     cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + table_name + "';")
     columns = cursor.fetchall()
     index = 0
+    val_name = str(val_name).replace(' ', '_')
+    val_name = str(val_name).replace('/', '_')
     for i in columns:
         if i[0] == val_name:
             return result[index]
@@ -1843,19 +1845,34 @@ def fillVWR_Enrichmnent_CCM(enrichment, magento, prms):
     return enrichment
 
 def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
+    mydb = getDatabase('localhost', 'God', 'Milkbeast400!', 'autofill')
 
     for i in range(18, len(enrichment)):
         sku = enrichment[4][i]
         product_info = magento.loc[magento['sku'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
-        pubchem_data = getPubchemData(sku, magento)
 
-        if not pubchem_data == None:
-            density = pubchem_data['Density']
-            boiling_point = pubchem_data['Boiling Point']
+        pubchem_db_data = getDatabaseData(mydb, sku, 'pubchem_data')
+        if pubchem_db_data == None:
 
-            enrichment[27][i] = density
-            enrichment[28][i] = boiling_point
+            pubchem_data = getPubchemData(sku, magento)
+
+            if not pubchem_data == None:
+                density = pubchem_data['Density']
+                boiling_point = pubchem_data['Boiling Point']
+
+                if not density == None:
+                    enrichment[27][i] = density
+                if not boiling_point == None:
+                    enrichment[28][i] = boiling_point
+        else:
+            density = getValueFromResult(mydb, pubchem_db_data, 'Density', 'pubchem_data')
+            boiling_point = getValueFromResult(mydb, pubchem_db_data, 'Boiling Point', 'pubchem_data')
+
+            if not density == None:
+                enrichment[27][i] = density
+            if not boiling_point == None:
+                enrichment[28][i] = boiling_point
         
         if not prms_info.empty:
             pack_size = prms_info['Pack Size'].values[0]
@@ -1910,7 +1927,10 @@ def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
     for row in sheet.iter_rows(min_row=20):
         if i < (len(enrichment)):
             for j in range(len(enrichment.columns)):
-                row[j].value = enrichment[j][i]
+                if enrichment[j][i] == None or enrichment[j][i] == 'None':
+                    row[j].value = ''
+                else:
+                    row[j].value = enrichment[j][i]
         else:
             break
         i += 1
