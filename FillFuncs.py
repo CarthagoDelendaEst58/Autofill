@@ -76,16 +76,31 @@ def getAbcamData(sku, magento):
         return None
 
 def getPubchemData(sku, magento):
+    table_name = 'pubchem_data'
+    mydb = getDatabase('localhost', 'God', 'Milkbeast400!', 'autofill')
+
     search_name = chooseSearchName(sku, magento)
     if len(search_name) > 0:
-        runMerged([search_name])
+        try:
+            runMerged([search_name])
 
-        with open('Pubchem/result.json', 'r') as f:
-            data = json.load(f)
+            with open('Pubchem/result.json', 'r') as f:
+                data = json.load(f)
 
-        for item in data:
-            if item['search_name'] == search_name:
-                return item
+            for item in data:
+                if item['search_name'] == search_name:
+                    try:
+                        for key in item:
+                            if isColInDB(mydb, table_name, key):
+                                addValToDB(mydb, sku, key, table_name, item[key])
+                            else:
+                                addColToDB(mydb, key, table_name)
+                                addValToDB(mydb, sku, key, table_name, item[key])
+                        return item
+                    except:
+                        return item
+        except:
+            print("Pubchem Error...")
 
     return None
 
@@ -109,6 +124,27 @@ def getDatabaseData(mydb, sku, table_name):
     else:
         return None
 
+def isColInDB(mydb, table_name, val_name):
+    cursor = mydb.cursor()
+    cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + table_name + "';")
+    columns = cursor.fetchall()
+
+    val_name = str(val_name).replace(' ', '_')
+    val_name = str(val_name).replace('/', '_')
+    for i in columns:
+        if i[0] == val_name:
+            return True
+
+    return False
+
+def SKUINDB(mydb, sku, table_name):
+    cursor = mydb.cursor()
+    cursor.execute("SELECT sku FROM " + table_name + " WHERE sku = '" + sku + "';")
+    result = cursor.fetchall()
+    if not len(result) > 0:
+        cursor.execute("INSERT INTO " + table_name + "(sku) VALUES ('" + sku + "');")
+    mydb.commit()
+
 def getValueFromResult(mydb, result, val_name, table_name):
     cursor = mydb.cursor()
     cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + table_name + "';")
@@ -120,8 +156,11 @@ def getValueFromResult(mydb, result, val_name, table_name):
         index += 1
     
     addColToDB(mydb, val_name, table_name)
+    return None
 
 def addColToDB(mydb, val_name, table_name):
+    val_name = str(val_name).replace(' ', '_')
+    val_name = str(val_name).replace('/', '_')
     cursor = mydb.cursor()
     cursor.execute("ALTER TABLE " + table_name + " ADD " + val_name + " VARCHAR(300);")
     cursor.execute("ALTER TABLE " + table_name + " ALTER " + val_name + " SET DEFAULT 'None';")
@@ -129,7 +168,11 @@ def addColToDB(mydb, val_name, table_name):
 
 def addValToDB(mydb, sku, val_name, table_name, val):
     cursor = mydb.cursor()
-    cursor.execute("UPDATE " + table_name + " SET " + val_name + " = '" + val + "' WHERE sku = '" + sku + "';")
+    SKUINDB(mydb, sku, table_name)
+    val_name = str(val_name).replace(' ', '_')
+    val_name = str(val_name).replace('/', '_')
+    cursor.execute("UPDATE " + table_name + " SET " + val_name + " = '" + str(val) + "' WHERE sku = '" + sku + "';")
+    mydb.commit()
 
 def chooseDataAbcam(data, product_info):
     if not product_info.empty:
