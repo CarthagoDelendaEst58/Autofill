@@ -109,7 +109,7 @@ def getDatabaseData(mydb, sku, table_name):
     else:
         return None
 
-def getValueFromResult(mydb, result, val_name, table_name, mydb):
+def getValueFromResult(mydb, result, val_name, table_name):
     cursor = mydb.cursor()
     cursor.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + table_name + "';")
     columns = cursor.fetchall()
@@ -119,7 +119,7 @@ def getValueFromResult(mydb, result, val_name, table_name, mydb):
             return result[index]
         index += 1
     
-    addColToDB
+    addColToDB(mydb, val_name, table_name)
 
 def addColToDB(mydb, val_name, table_name):
     cursor = mydb.cursor()
@@ -127,9 +127,9 @@ def addColToDB(mydb, val_name, table_name):
     cursor.execute("ALTER TABLE " + table_name + " ALTER " + val_name + " SET DEFAULT 'None';")
     mydb.commit()
 
-# def addValToDB(mydb, sku, val_name, val):
-#     cursor = mydb.cursor()
-
+def addValToDB(mydb, sku, val_name, table_name, val):
+    cursor = mydb.cursor()
+    cursor.execute("UPDATE " + table_name + " SET " + val_name + " = '" + val + "' WHERE sku = '" + sku + "';")
 
 def chooseDataAbcam(data, product_info):
     if not product_info.empty:
