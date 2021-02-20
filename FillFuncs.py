@@ -164,8 +164,11 @@ def addColToDB(mydb, val_name, table_name):
     val_name = str(val_name).replace(' ', '_')
     val_name = str(val_name).replace('/', '_')
     cursor = mydb.cursor()
-    cursor.execute("ALTER TABLE " + table_name + " ADD " + val_name + " VARCHAR(300);")
-    cursor.execute("ALTER TABLE " + table_name + " ALTER " + val_name + " SET DEFAULT 'None';")
+    try:
+        cursor.execute("ALTER TABLE " + table_name + " ADD " + val_name + " VARCHAR(300);")
+        cursor.execute("ALTER TABLE " + table_name + " ALTER " + val_name + " SET DEFAULT 'None';")
+    except:
+        print("Could not add col")
     mydb.commit()
 
 def addValToDB(mydb, sku, val_name, table_name, val):
@@ -179,9 +182,9 @@ def addValToDB(mydb, sku, val_name, table_name, val):
 def chooseDataAbcam(sku, data, product_info, mydb):
     if not product_info.empty:
         for item in data:
-            print(item['search_name'])
+            # print(item['search_name'])
             if item['search_name'] == product_info['cas_number'].values[0]:
-                print("search name == cas number")
+                # print("search name == cas number")
                 try:
                     for key in item:
                         if isColInDB(mydb, 'abcam_data', key):
@@ -203,15 +206,14 @@ def chooseDataAbcam(sku, data, product_info, mydb):
                 else:
                     antibody_type = ''
                 
-                print(antibody_type + ", " + item['Clonality'])
+                # print(antibody_type + ", " + item['Clonality'])
 
                 similarity = SequenceMatcher(None, item['search_name'], item['product_name']).ratio()
-                print("similarity: " + str(similarity))
-                print("search name: " + item['search_name'])
-                print("product name: " + item['product_name'])
+                # print("similarity: " + str(similarity))
+                # print("search name: " + item['search_name'])
+                # print("product name: " + item['product_name'])
 
                 if item['Clonality'] == antibody_type and similarity > 0.6:
-                    print("yes")
                     try:
                         for key in item:
                             if isColInDB(mydb, 'abcam_data', key):
@@ -1265,7 +1267,7 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
     new_fisher.save('outputs/old_product_outputs/old_fisher_output.xlsx')
     # new_fisher.save('../../outputs/old_product_outputs/old_fisher_output.xlsx')
 
-def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento, mydb):
+def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, abcam_db_data, sku, magento, mydb):
 
     if attribute == 'Form':
         pubchem_db_data = getDatabaseData(mydb, sku, 'pubchem_data')
@@ -1375,7 +1377,18 @@ def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_i
         host = ''
         un_number = ''
 
-    if not abcam_info == None:
+    if not abcam_db_data == None:
+        purity = getValueFromResult(mydb, abcam_db_data, 'Purity', 'abcam_data')
+        immunogen = getValueFromResult(mydb, abcam_db_data, 'Immunogen', 'abcam_data')
+        isotype = getValueFromResult(mydb, abcam_db_data, 'Isotype', 'abcam_data')
+        function = getValueFromResult(mydb, abcam_db_data, 'Function', 'abcam_data')
+        concentration = getValueFromResult(mydb, abcam_db_data, 'Concentration', 'abcam_data')
+        clonality = getValueFromResult(mydb, abcam_db_data, 'Clonality', 'abcam_data')
+        host_species = getValueFromResult(mydb, abcam_db_data, 'Host Species', 'abcam_data')
+        clone_number = getValueFromResult(mydb, abcam_db_data, 'Clone number', 'abcam_data')
+        light_chain_type = getValueFromResult(mydb, abcam_db_data, 'Light chain type', 'abcam_data')
+        species_reactivity = getValueFromResult(mydb, abcam_db_data, 'Species reactivity', 'abcam_data')
+    elif not abcam_info == None:
         purity = abcam_info['Purity']
         immunogen = abcam_info['Immunogen']
         isotype = abcam_info['Isotype']
@@ -1530,8 +1543,6 @@ def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, mage
             
             authoring[28][i] = un_number
     
-    
-    
     for i in range(3, len(attributes)-1):
         sku = attributes[2][i]
         product_info = new_magento.loc[new_magento['sku'] == sku]
@@ -1543,9 +1554,13 @@ def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, mage
         
         attribute_name = attributes[7][i]
         
-        abcam_info = getAbcamData(sku, magento_sept, mydb)
+        abcam_db_info = getDatabaseData(mydb, sku, 'abcam_data')
+        if abcam_db_info == None:
+            abcam_info = getAbcamData(sku, magento_sept, mydb)
+        else:
+            abcam_info = None
 
-        attributes[11][i] = attributeLookup(attribute_name, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento, mydb)
+        attributes[11][i] = attributeLookup(attribute_name, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, abcam_db_info, sku, magento, mydb)
 
     wb_enrichment = opxl.load_workbook(filename)
     core_content = wb_enrichment['Core_Content']
@@ -1943,7 +1958,7 @@ def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
             if type(name) == str:
                 name = tidyDescription(name)
                 name = ''.join([i for i in name if i.isalnum() or i == ' '])
-                enrichment[10][i]
+                enrichment[10][i] = name
                 
             if type(description) == str:
                 description = tidyDescription(description)
