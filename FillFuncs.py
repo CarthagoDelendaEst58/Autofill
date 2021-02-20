@@ -52,23 +52,23 @@ def chooseSearchName(sku, magento):
 
     return search_name
 
-def getAbcamData(sku, magento):
+def getAbcamData(sku, magento, mydb):
     search_name = chooseSearchName(sku, magento)
     product_info = magento.loc[magento['sku'] == sku]
     if os.path.exists('Abcam/'+str(search_name)+'.json'):
         with open('Abcam/'+str(search_name)+'.json', 'r') as f:
             data = json.load(f)
         
-        return chooseDataAbcam(data, product_info)
+        return chooseDataAbcam(sku, data, product_info, mydb)
     elif len(search_name) > 0:
         search_name = search_name.replace('/', '')
         task1('Abcam', [search_name])
-        print(os.path.exists('Abcam/'+str(search_name)+'.json'))
+        # print(os.path.exists('Abcam/'+str(search_name)+'.json'))
         if os.path.exists('Abcam/'+str(search_name)+'.json'):
             with open('Abcam/'+str(search_name)+'.json', 'r') as f:
                 data = json.load(f)
             
-            return chooseDataAbcam(data, product_info)
+            return chooseDataAbcam(sku, data, product_info, mydb)
         else:
             return None
 
@@ -176,11 +176,23 @@ def addValToDB(mydb, sku, val_name, table_name, val):
     cursor.execute("UPDATE " + table_name + " SET " + val_name + " = '" + str(val) + "' WHERE sku = '" + sku + "';")
     mydb.commit()
 
-def chooseDataAbcam(data, product_info):
+def chooseDataAbcam(sku, data, product_info, mydb):
     if not product_info.empty:
         for item in data:
+            print(item['search_name'])
             if item['search_name'] == product_info['cas_number'].values[0]:
-                return item
+                print("search name == cas number")
+                try:
+                    for key in item:
+                        if isColInDB(mydb, 'abcam_data', key):
+                            addValToDB(mydb, sku, key, 'abcam_data', item[key])
+                        else:
+                            addColToDB(mydb, key, 'abcam_data')
+                            addValToDB(mydb, sku, key, 'abcam_data', item[key])
+                    return item
+                except:
+                    print("DB Error...")
+                    return item
             else:
                 antibody_type = product_info['antibody_type'].values[0]
                 antibody_type = str(antibody_type)
@@ -190,11 +202,26 @@ def chooseDataAbcam(data, product_info):
                     antibody_type = 'Monoclonal'
                 else:
                     antibody_type = ''
+                
+                print(antibody_type + ", " + item['Clonality'])
 
                 similarity = SequenceMatcher(None, item['search_name'], item['product_name']).ratio()
+                print("similarity: " + str(similarity))
+                print("search name: " + item['search_name'])
+                print("product name: " + item['product_name'])
 
                 if item['Clonality'] == antibody_type and similarity > 0.6:
-                    return item
+                    print("yes")
+                    try:
+                        for key in item:
+                            if isColInDB(mydb, 'abcam_data', key):
+                                addValToDB(mydb, sku, key, 'abcam_data', item[key])
+                            else:
+                                addColToDB(mydb, key, 'abcam_data')
+                                addValToDB(mydb, sku, key, 'abcam_data', item[key])
+                        return item
+                    except:
+                        return item
 
     return None
 
@@ -1238,16 +1265,24 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
     new_fisher.save('outputs/old_product_outputs/old_fisher_output.xlsx')
     # new_fisher.save('../../outputs/old_product_outputs/old_fisher_output.xlsx')
 
-def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento):
+def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento, mydb):
 
     if attribute == 'Form':
-        try:
-            pubchem_data = getPubchemData(sku, magento)
-            if not pubchem_data == None:
-                form = pubchem_data['Color/Form']
+        pubchem_db_data = getDatabaseData(mydb, sku, 'pubchem_data')
+        if pubchem_db_data == None:
+            try:
+                pubchem_data = getPubchemData(sku, magento)
+                if not pubchem_data == None:
+                    form = pubchem_data['Color/Form']
+                    return form
+            except:
+                print('Pubchem Error')
+        else:
+            form = getValueFromResult(mydb, pubchem_db_data, 'Color/Form', 'pubchem_data')
+            if form == None or form == 'None':
+                return ''
+            else:
                 return form
-        except:
-            print('Pubchem Error')
 
     if not prms_info.empty:
         storage_condition = prms_info['Storage Temp'].values[0]
@@ -1464,6 +1499,7 @@ def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_i
         return ''
 
 def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, magento_sept, unspsc_codes, origin):
+    mydb = getDatabase('localhost', 'God', 'Milkbeast400!', 'autofill')
     authoring_file = pd.ExcelFile(filename)
 
     authoring = pd.read_excel(authoring_file, 'Core_Content', dtype=object)
@@ -1498,7 +1534,6 @@ def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, mage
     
     for i in range(3, len(attributes)-1):
         sku = attributes[2][i]
-        print(sku)
         product_info = new_magento.loc[new_magento['sku'] == sku]
         product_info_sept = magento_sept.loc[magento_sept['sku'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
@@ -1508,9 +1543,9 @@ def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, mage
         
         attribute_name = attributes[7][i]
         
-        abcam_info = getAbcamData(sku, magento_sept)
+        abcam_info = getAbcamData(sku, magento_sept, mydb)
 
-        attributes[11][i] = attributeLookup(attribute_name, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento)
+        attributes[11][i] = attributeLookup(attribute_name, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento, mydb)
 
     wb_enrichment = opxl.load_workbook(filename)
     core_content = wb_enrichment['Core_Content']
