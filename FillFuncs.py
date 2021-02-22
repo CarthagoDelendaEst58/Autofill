@@ -28,6 +28,8 @@ def tidyDescription(desc):
     desc = desc.replace('<F128>','')
     desc = desc.replace('<130>','')
     desc = desc.replace('<F255>','')
+    desc = desc.replace('&deg;', '°')
+    desc = desc.replace('deg ', '°')
     if desc.endswith(','):
         desc = desc[:len(desc)-1]
     return desc
@@ -1276,7 +1278,7 @@ def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_i
                 pubchem_data = getPubchemData(sku, magento)
                 if not pubchem_data == None:
                     form = pubchem_data['Color/Form']
-                    return form
+                    return form + " | pulled from Pubchem"
             except:
                 print('Pubchem Error')
         else:
@@ -1284,7 +1286,7 @@ def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_i
             if form == None or form == 'None':
                 return ''
             else:
-                return form
+                return form + " | pulled from Pubchem"
 
     if not prms_info.empty:
         storage_condition = prms_info['Storage Temp'].values[0]
@@ -1378,30 +1380,30 @@ def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_i
         un_number = ''
 
     if not abcam_db_data == None:
-        purity = getValueFromResult(mydb, abcam_db_data, 'Purity', 'abcam_data')
-        immunogen = getValueFromResult(mydb, abcam_db_data, 'Immunogen', 'abcam_data')
-        isotype = getValueFromResult(mydb, abcam_db_data, 'Isotype', 'abcam_data')
-        function = getValueFromResult(mydb, abcam_db_data, 'Function', 'abcam_data')
-        concentration = getValueFromResult(mydb, abcam_db_data, 'Concentration', 'abcam_data')
-        clonality = getValueFromResult(mydb, abcam_db_data, 'Clonality', 'abcam_data')
-        host_species = getValueFromResult(mydb, abcam_db_data, 'Host Species', 'abcam_data')
-        clone_number = getValueFromResult(mydb, abcam_db_data, 'Clone number', 'abcam_data')
-        light_chain_type = getValueFromResult(mydb, abcam_db_data, 'Light chain type', 'abcam_data')
-        species_reactivity = getValueFromResult(mydb, abcam_db_data, 'Species reactivity', 'abcam_data')
+        purity = getValueFromResult(mydb, abcam_db_data, 'Purity', 'abcam_data') + " | pulled from Abcam"
+        immunogen = getValueFromResult(mydb, abcam_db_data, 'Immunogen', 'abcam_data') + " | pulled from Abcam"
+        isotype = getValueFromResult(mydb, abcam_db_data, 'Isotype', 'abcam_data') + " | pulled from Abcam"
+        function = getValueFromResult(mydb, abcam_db_data, 'Function', 'abcam_data') + " | pulled from Abcam"
+        concentration = getValueFromResult(mydb, abcam_db_data, 'Concentration', 'abcam_data') + " | pulled from Abcam"
+        clonality = getValueFromResult(mydb, abcam_db_data, 'Clonality', 'abcam_data') + " | pulled from Abcam"
+        host_species = getValueFromResult(mydb, abcam_db_data, 'Host Species', 'abcam_data') + " | pulled from Abcam"
+        clone_number = getValueFromResult(mydb, abcam_db_data, 'Clone number', 'abcam_data') + " | pulled from Abcam"
+        light_chain_type = getValueFromResult(mydb, abcam_db_data, 'Light chain type', 'abcam_data') + " | pulled from Abcam"
+        species_reactivity = getValueFromResult(mydb, abcam_db_data, 'Species reactivity', 'abcam_data') + " | pulled from Abcam"
     elif not abcam_info == None:
-        purity = abcam_info['Purity']
-        immunogen = abcam_info['Immunogen']
-        isotype = abcam_info['Isotype']
-        function = abcam_info['Function']
-        concentration = abcam_info['Concentration']
-        clonality = abcam_info['Clonality']
+        purity = abcam_info['Purity'] + " | pulled from Abcam"
+        immunogen = abcam_info['Immunogen'] + " | pulled from Abcam"
+        isotype = abcam_info['Isotype'] + " | pulled from Abcam"
+        function = abcam_info['Function'] + " | pulled from Abcam"
+        concentration = abcam_info['Concentration'] + " | pulled from Abcam"
+        clonality = abcam_info['Clonality'] + " | pulled from Abcam"
         try:
-            host_species = abcam_info['Host species']
+            host_species = abcam_info['Host species'] + " | pulled from Abcam"
         except:
-            host_species = abcam_info['Host Species']
-        clone_number = abcam_info['Clone number']
-        light_chain_type = abcam_info['Light chain type']
-        species_reactivity = abcam_info['Species reactivity']
+            host_species = abcam_info['Host Species'] + " | pulled from Abcam"
+        clone_number = abcam_info['Clone number'] + " | pulled from Abcam"
+        light_chain_type = abcam_info['Light chain type'] + " | pulled from Abcam"
+        species_reactivity = abcam_info['Species reactivity'] + " | pulled from Abcam"
     else:
         purity = ''
         immunogen = ''
@@ -1911,18 +1913,19 @@ def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
                 density = pubchem_data['Density']
                 boiling_point = pubchem_data['Boiling Point']
 
-                if not density == None:
-                    enrichment[27][i] = density
-                if not boiling_point == None:
-                    enrichment[28][i] = boiling_point
+                if (not density == None) and len(density) > 0 and (not 'None' in density):
+                    enrichment[27][i] = density + " | pulled from Pubchem"
+                if (not boiling_point == None) and len(boiling_point) > 0 and (not 'None' in boiling_point):
+                    enrichment[28][i] = boiling_point + " | pulled from Pubchem"
         else:
             density = getValueFromResult(mydb, pubchem_db_data, 'Density', 'pubchem_data')
             boiling_point = getValueFromResult(mydb, pubchem_db_data, 'Boiling Point', 'pubchem_data')
 
-            if not density == None:
-                enrichment[27][i] = density
-            if not boiling_point == None:
-                enrichment[28][i] = boiling_point
+            if (not density == None) and len(density) > 0 and (not 'None' in density):
+                enrichment[27][i] = density + " | pulled from Pubchem"
+            if (not boiling_point == None) and len(boiling_point) > 0 and (not 'None' in boiling_point):
+                boiling_point = tidyDescription(boiling_point)
+                enrichment[28][i] = boiling_point + " | pulled from Pubchem"
         
         if not prms_info.empty:
             pack_size = prms_info['Pack Size'].values[0]
@@ -1931,13 +1934,13 @@ def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
             enrichment[6][i] = pack_size
         
             if storage_temp == 'AM':
-                enrichment[31][i] = '15C to 30C'
+                enrichment[31][i] = 'Ambient'
             elif storage_temp == 'FR':
-                enrichment[31][i] = '-30C to -2C'
+                enrichment[31][i] = 'Dry ice'
             elif storage_temp == 'RF':
-                enrichment[31][i] = '2C to 8C'
+                enrichment[31][i] = 'Cold pack'
             elif storage_temp == '70' or storage_temp == '80':
-                enrichment[31][i] = '-70C'
+                enrichment[31][i] = 'Dry ice'
         
         if not product_info.empty:
             name = product_info['name'].values[0]
@@ -1945,6 +1948,8 @@ def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
             keywords = product_info['keywords'].values[0]
             cas_number = product_info['cas_number'].values[0]
             melting_point = product_info['melting_point'].values[0]
+            if type(melting_point) == str:
+                melting_point = tidyDescription(melting_point)
 
             if type(keywords) == str:
                 keywords = keywords.replace(', ', ';')
