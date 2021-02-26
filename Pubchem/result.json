@@ -1,14 +1,14 @@
 [
     {
-        "Molecular Weight": "75.07g/mol",
-        "Monoisotopic Mass": "75.032028g/mol",
-        "Physical Description": "Glycine appears as white crystals. (NTP, 1992)\nDryPowder\nSolid\nWhite crystalline powder; odourless",
-        "Color/Form": "White crystals\nMONOCLINIC OR TRIGONAL PRISMS FROM DILUTE ALCOHOL\nMonoclinic prisms from alc",
+        "Molecular Weight": "1488.8g/mol",
+        "Monoisotopic Mass": "1487.869176g/mol",
+        "Physical Description": "",
+        "Color/Form": "",
         "Boiling Point": "",
-        "Melting Point": "451 °F (NTP, 1992)\n262dec °C\n290 °C decomposes\n262.2°C",
-        "Density": "1.1607 (NTP, 1992)\n1.161 g/cu cm @ 20 °C",
-        "LogP": "-3.21\n-3.21 (LogP)\nlog Kow = -3.21\n-3.21",
-        "search_name": "56-40-6",
-        "cid": 750
+        "Melting Point": "",
+        "Density": "",
+        "LogP": "",
+        "search_name": "1405-41-0",
+        "cid": 137345962
     }
 ]
