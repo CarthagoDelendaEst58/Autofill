@@ -77,29 +77,6 @@ def getAbcamData(sku, magento):
     else:
         return None
 
-# def getAbcamData(sku, magento, mydb):
-#     search_name = chooseSearchName(sku, magento)
-#     product_info = magento.loc[magento['sku'] == sku]
-#     if os.path.exists('Abcam/'+str(search_name)+'.json'):
-#         with open('Abcam/'+str(search_name)+'.json', 'r') as f:
-#             data = json.load(f)
-        
-#         return chooseDataAbcam(sku, data, product_info, mydb)
-#     elif len(search_name) > 0:
-#         search_name = search_name.replace('/', '')
-#         task1('Abcam', [search_name])
-#         # print(os.path.exists('Abcam/'+str(search_name)+'.json'))
-#         if os.path.exists('Abcam/'+str(search_name)+'.json'):
-#             with open('Abcam/'+str(search_name)+'.json', 'r') as f:
-#                 data = json.load(f)
-            
-#             return chooseDataAbcam(sku, data, product_info, mydb)
-#         else:
-#             return None
-
-#     else:
-#         return None
-
 def getPubchemData(sku, magento):
     search_name = chooseSearchName(sku, magento)
     if len(search_name) > 0:
