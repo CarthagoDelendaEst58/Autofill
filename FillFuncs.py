@@ -1,3 +1,4 @@
+from re import A
 import pandas as pd
 import numpy as np
 import openpyxl as opxl
@@ -33,6 +34,17 @@ def tidyDescription(desc):
     if desc.endswith(','):
         desc = desc[:len(desc)-1]
     return desc
+
+def columnize(df, primary_row, secondary_row):
+    temp = df.fillna('')
+    columns = []
+    for i in range(len(temp.columns)):
+        if temp.iloc[primary_row, i] == '':
+            columns.append(temp.iloc[secondary_row, i])
+        else:
+            columns.append(temp.iloc[primary_row, i])
+    df.columns = columns
+    return df
 
 def chooseSearchName(sku, magento):
     product_info = magento.loc[magento['sku'] == sku]
@@ -202,16 +214,37 @@ def catSheetVWR(sheet_name, cell_str):
 def VWREnrichmentDriver(filename, magento, prms, magento_may, categories):
     wb = opxl.load_workbook(filename)
     skus = wb.active
-    antibodies = pd.read_excel('forms/vwr_enrichment_antibodies.xlsx')
-    ppe = pd.read_excel('forms/vwr_enrichment_ppe.xlsx')
-    sera = pd.read_excel('forms/vwr_enrichment_sera.xlsx')
-    ccm = pd.read_excel('forms/vwr_enrichment_ccm.xlsx')
-    chemicals = pd.read_excel('forms/vwr_enrichment_chemicals.xlsx')
-    antibodies.columns = np.arange(len(antibodies.columns))
-    ppe.columns = np.arange(len(ppe.columns))
-    sera.columns = np.arange(len(sera.columns))
-    ccm.columns = np.arange(len(ccm.columns))
-    chemicals.columns = np.arange(len(chemicals.columns))
+    # antibodies = pd.read_excel('forms/vwr_enrichment_antibodies.xlsx', dtype=str)
+    antibodies = pd.read_excel('forms/GlobalProductEnrichmentFile_Antibodies (New).xlsx', dtype=str)
+    # ppe = pd.read_excel('forms/vwr_enrichment_ppe.xlsx', dtype=str)
+    ppe = pd.read_excel('forms/GlobalProductEnrichmentFile_Proteins_Peptides_Enzymes (New).xlsx', dtype=str)
+    # sera = pd.read_excel('forms/vwr_enrichment_sera.xlsx', dtype=str)
+    sera = pd.read_excel('forms/GlobalProductEnrichmentFile_Sera (Old).xlsx', dtype=str)
+    ccm = pd.read_excel('forms/vwr_enrichment_ccm.xlsx', dtype=str)
+    # chemicals = pd.read_excel('forms/vwr_enrichment_chemicals.xlsx', dtype=str)
+    chemicals = pd.read_excel('forms/GlobalProductEnrichmentFile_Chemicals (New).xlsx', dtype=str)
+    # antibodies.columns = np.arange(len(antibodies.columns))
+    # ppe.columns = np.arange(len(ppe.columns))
+    # sera.columns = np.arange(len(sera.columns))
+    # ccm.columns = np.arange(len(ccm.columns))
+    # chemicals.columns = np.arange(len(chemicals.columns))
+    ccm = columnize(ccm, 7, 6)
+    sera = columnize(sera, 7, 6)
+    chemicals.columns = chemicals.iloc[11]
+    # antibodies.columns = antibodies.iloc[1]
+    antibodies = columnize(antibodies, 6, 5)
+    # ppe.columns = ppe.iloc[0]
+    ppe = columnize(ppe, 6, 5)
+    new_columns = [i.strip() if type(i) == str else i for i in ccm.columns]
+    ccm.columns = new_columns
+    new_columns = [i.strip() if type(i) == str else i for i in sera.columns]
+    sera.columns = new_columns
+    new_columns = [i.strip() if type(i) == str else i for i in chemicals.columns]
+    chemicals.columns = new_columns
+    new_columns = [i.strip() if type(i) == str else i for i in antibodies.columns]
+    antibodies.columns = new_columns
+    new_columns = [i.strip() if type(i) == str else i for i in ppe.columns]
+    ppe.columns = new_columns
 
     categories.columns = categories.iloc[0]
     
@@ -242,11 +275,11 @@ def VWREnrichmentDriver(filename, magento, prms, magento_may, categories):
         if sku.startswith('11'):
             if (category == 'MEDIA' or sku.startswith('1130') or sku.startswith('1131') or sku.startswith('1133') or sku.startswith('1140') or sku.startswith('1141') or sku.startswith('1144') or sku.startswith('1145') or sku.startswith('1148') or sku.startswith('1151')):
                 skus['B'+str(i)].value = catSheetVWR('Cell Culture Media', skus['B'+str(i)].value)
-                ccm.loc[num_ccm+12, 4] = sku
+                ccm.loc[num_ccm+11, 'Supplier Part No.'] = sku
                 num_ccm = num_ccm + 1
             if category == 'BIOCHEMICALS':
                 skus['B'+str(i)].value = catSheetVWR('Chemicals', skus['B'+str(i)].value)
-                chemicals.loc[num_chemicals+18, 4] = sku
+                chemicals.loc[num_chemicals+22, 'Supplier Part No.'] = sku
                 num_chemicals = num_chemicals + 1
             # if category == 'PCR' or sku.startswith('11EB') or sku.startswith('11EP') or sku.startswith('11MSTP') or sku.startswith('11RTO') or sku.startswith('1199'):
 
@@ -254,24 +287,24 @@ def VWREnrichmentDriver(filename, magento, prms, magento_may, categories):
         else:
             if (sku.startswith('08') or 'anti-' in name or 'Anti-' in name or 'antibody' in name or 'Antibody' in name) and not sku.startswith('07'):
                 skus['B'+str(i)].value = catSheetVWR('Antibodies', skus['B'+str(i)].value)
-                antibodies.loc[num_antibodies+3, 5] = sku
+                antibodies.loc[num_antibodies+14, 'Supplier Cat. No.'] = sku
                 num_antibodies = num_antibodies + 1
             elif 'serum' in name or 'Serum' in name:
                     skus['B'+str(i)].value = catSheetVWR('Sera', skus['B'+str(i)].value)
-                    sera.loc[num_sera+12, 4] = sku
+                    sera.loc[num_sera+11, 'Supplier Part No.'] = sku
                     num_sera = num_sera + 1
             if sku.startswith('02') or 'ase' in name:
                 if not (sku.startswith('02') and ('ChLiA' in name or 'peptide' in name or 'Peptide' in name)):
                     skus['B'+str(i)].value = catSheetVWR('Protein, Peptides, Enzymes', skus['B'+str(i)].value)
-                    ppe.loc[num_ppe+3, 5] = sku
+                    ppe.loc[num_ppe+14, 'Supplier Cat. No.'] = sku
                     num_ppe = num_ppe + 1
             if 'media' in name or 'Media' in name or 'medium' in name or 'Medium' in name or 'RPMI' in name or (sku.startswith('09') and not 'serum' in name):
                 skus['B'+str(i)].value = catSheetVWR('Cell Culture Media', skus['B'+str(i)].value)
-                ccm.loc[num_ccm+12, 4] = sku
+                ccm.loc[num_ccm+11, 'Supplier Part No.'] = sku
                 num_ccm = num_ccm + 1
             if (type(cas_number) == str and len(cas_number) > 0 and not cas_number == 'Not applicable') or sku.startswith('02'):
                 skus['B'+str(i)].value = catSheetVWR('Chemicals', skus['B'+str(i)].value)
-                chemicals.loc[num_chemicals+18, 4] = sku
+                chemicals.loc[num_chemicals+22, 'Supplier Part No.'] = sku
                 num_chemicals = num_chemicals + 1
 
     wb.save(filename)
@@ -279,7 +312,7 @@ def VWREnrichmentDriver(filename, magento, prms, magento_may, categories):
     fillVWR_Enrichment_Antibodies(antibodies, magento, prms)
     fillVWR_Enrichmnent_PPE(ppe, magento, prms)
     fillVWR_Enrichmnent_Sera(sera, magento)
-    fillVWR_Enrichmnent_CCM(ccm, magento, prms)
+    # fillVWR_Enrichmnent_CCM(ccm, magento, prms)
     fillVWR_Enrichmnent_Chemicals(chemicals, magento, prms)
     fillVWR_Enrichment(filename, magento_may)
 
@@ -287,12 +320,14 @@ def fillVWR_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, 
     wb = opxl.load_workbook(filename)
     skus = wb.active
     vwr = pd.read_excel('forms/vwr_form.xlsx', dtype=object)
-    vwr.columns = np.arange(len(vwr.columns))
+    vwr.columns = vwr.iloc[1]
     for i in range(2, skus.max_row+1):
-        vwr.loc[i+2, 4] = str(skus['A'+str(i)].value)
+        vwr.loc[i+2, ' Vendor Part Number'] = str(skus['A'+str(i)].value)
+        # vwr[' Vendor Part Number'][i+2] = str(skus['A'+str(i)].value)
+        # print(str(skus['A'+str(i)].value))
 
     for i in range(4, len(vwr)):
-        sku = str(vwr[4][i])
+        sku = str(vwr[' Vendor Part Number'][i])
         product_info = magento.loc[magento['sku'] == sku]
         lot_info = lot_master.loc[lot_master['Product number'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
@@ -365,17 +400,17 @@ def fillVWR_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, 
                 
             
             if weight_in_lb < 0.5:
-                vwr[40][i] = 7
-                vwr[41][i] = 4
-                vwr[42][i] = 5
+                vwr[' UM1 Length'][i] = 7
+                vwr[' UM1 Width'][i] = 4
+                vwr[' UM1 Height'][i] = 5
             elif weight_in_lb <= 1:
-                vwr[40][i] = 12
-                vwr[41][i] = 7
-                vwr[42][i] = 5
+                vwr[' UM1 Length'][i] = 12
+                vwr[' UM1 Width'][i] = 7
+                vwr[' UM1 Height'][i] = 5
             else:
-                vwr[40][i] = 12
-                vwr[41][i] = 12
-                vwr[42][i] = 12
+                vwr[' UM1 Length'][i] = 12
+                vwr[' UM1 Width'][i] = 12
+                vwr[' UM1 Height'][i] = 12
 
             if type(name) == str:
                 name = tidyDescription(name)
@@ -385,92 +420,92 @@ def fillVWR_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, 
                         temp_name = temp_name + c
                 name = temp_name
                 if len(name) <= 40:
-                    vwr[5][i] = name
+                    vwr[' 40 Character Description'][i] = name
                 else:
-                    vwr[5][i] = name[:40]
+                    vwr[' 40 Character Description'][i] = name[:40]
             if type(short_desc) == str:
                 short_desc = tidyDescription(short_desc)
                 if len(short_desc) <= 300:
-                    vwr[6][i] = short_desc + "\n pls work"
+                    vwr[' Enhanced Description'][i] = short_desc + "\n pls work"
                 else:
-                    vwr[6][i] = short_desc[:300]
+                    vwr[' Enhanced Description'][i] = short_desc[:300]
                     
             if ship_temp == 'CP':
-                vwr[107][i] = 'B'
-                vwr[108][i] = 'Blue'
+                vwr[' Ship Temp Requirement'][i] = 'B'
+                vwr[' If on ice, blue or dry?'][i] = 'Blue'
             elif ship_temp == 'DI':
-                vwr[107][i] = 'A'
-                vwr[108][i] = 'Dry'
+                vwr[' Ship Temp Requirement'][i] = 'A'
+                vwr[' If on ice, blue or dry?'][i] = 'Dry'
             else:
-                vwr[107][i] = 'C'
+                vwr[' Ship Temp Requirement'][i] = 'C'
                 
             if type(host) == str and len(host) > 0:
-                vwr[61][i] = 'Animal: ' + host
+                vwr[' Animal/Plant or Synthetic'][i] = 'Animal: ' + host
             else:
-                vwr[61][i] = 'Synthetic'
+                vwr[' Animal/Plant or Synthetic'][i] = 'Synthetic'
                 
             #if DOT_PSN != 'N/A': 
-            vwr[68][i] = name
-            vwr[69][i] = biochem_physiol_actions
-            vwr[70][i] = packing_group
-            vwr[71][i] = 'No'
-            vwr[72][i] = 'No'
-            vwr[73][i] = 'No'
-            vwr[77][i] = packing_group
+            vwr[' DOT - If NOS, Technical Name'][i] = name
+            vwr[' DOT - UN Identification #'][i] = biochem_physiol_actions
+            vwr[' DOT - Packing Group I, II, or III'][i] = packing_group
+            vwr[' Reportable Quanitity (RQ)'][i] = 'No'
+            vwr[' Limited Quantity'][i] = 'No'
+            vwr[' DOT-SP'][i] = 'No'
+            vwr[' IATA - Packing Group I, II, or III'][i] = packing_group
                 
                 
             if type(price) != str and type(categories) == str:
                 if 'Biochemicals' in categories or 'Cell Biology' in categories or 'Immunology' in categories or 'Antibody' in categories or 'Chemicals' in categories:
-                    vwr[9][i] = 0.77*price
-                    vwr[11][i] = 0.77*price
+                    vwr[' Vendor Price'][i] = 0.77*price
+                    vwr[' Future Vendor Price'][i] = 0.77*price
                 elif 'Molecular Biology' in categories or 'SafTest' in categories:
-                    vwr[9][i] = 0.85*price
-                    vwr[11][i] = 0.85*price
+                    vwr[' Vendor Price'][i] = 0.85*price
+                    vwr[' Future Vendor Price'][i] = 0.85*price
                 elif sku.startswith('02') or sku.startswith('07') or sku.startswith('04'):
-                    vwr[9][i] = 0.77*price
-                    vwr[11][i] = 0.77*price
+                    vwr[' Vendor Price'][i] = 0.77*price
+                    vwr[' Future Vendor Price'][i] = 0.77*price
                 elif sku.startswith('09') or sku.startswith('08') or sku.startswith('11'):
-                    vwr[9][i] = 0.85*price
-                    vwr[11][i] = 0.85*price
+                    vwr[' Vendor Price'][i] = 0.85*price
+                    vwr[' Future Vendor Price'][i] = 0.85*price
                 
             tariff_code = str(tariff_code)
             if len(tariff_code) >= 4:
-                vwr[54][i] = tariff_code
+                vwr[' US Harmonization Code'][i] = tariff_code
             
-            vwr[7][i] = 'EA'
-            vwr[8][i] = 1
-            vwr[10][i] = 'USD'
-            vwr[12][i] = '1/1/2021'
-            vwr[15][i] = 'No'
-            vwr[17][i] = quantity
-            vwr[18][i] = unit
-            vwr[19][i] = pack_size
-            vwr[20][i] = 'EA'
-            vwr[21][i] = price
-            vwr[22][i] = price
-            vwr[39][i] = weight_in_lb
-            vwr[43][i] = 'Y'
-            vwr[58][i] = country_of_origin
-            vwr[59][i] = 'No'
-            vwr[60][i] = 'No'
-            vwr[62][i] = host
-            vwr[65][i] = msds_avail
-            vwr[66][i] = msds_avail
-            vwr[67][i] = DOT_PSN
-            vwr[82][i] = 'Box'
-            vwr[83][i] = 'No'
-            vwr[84][i] = 'Plastic'
-            vwr[85][i] = cas_number
-            vwr[86][i] = 'No'
-            vwr[87][i] = 'No'
-            vwr[88][i] = 'No'
-            vwr[89][i] = 'Y'
-            vwr[90][i] = 'No'
-            vwr[91][i] = 'No'
-            vwr[92][i] = 'N/A'
-            vwr[93][i] = 'N/A'
-            vwr[105][i] = 'No'
-            vwr[106][i] = 'Y'
+            vwr[' Purchase Unit of Measure'][i] = 'EA'
+            vwr[' Minimum Order?'][i] = 1
+            vwr[' Vendor Currency'][i] = 'USD'
+            vwr[' Future Pricing Effectivity Date'][i] = '1/1/2021'
+            vwr[' lot controlled'][i] = 'No'
+            vwr[' Component Quantity'][i] = quantity
+            vwr[' Component Measure'][i] = unit
+            vwr[' Component Size'][i] = pack_size
+            vwr[' Selling UM1'][i] = 'EA'
+            vwr[' UM1 List Price'][i] = price
+            vwr[' Future UM1 List Price'][i] = price
+            vwr[' UM1 Weight'][i] = weight_in_lb
+            vwr[' UM1 Ship as Is?'][i] = 'Y'
+            vwr[' Country of Origin'][i] = country_of_origin
+            vwr[' Eligible for NAFTA'][i] = 'No'
+            vwr[' Other US or CA Free Trade Agreements (FTAs)'][i] = 'No'
+            vwr[' If Animal Origin - Confirm Genus/Species & CITES compliance'][i] = host
+            vwr[' MSDS available'][i] = msds_avail
+            vwr[' WHMIS Compliant'][i] = msds_avail
+            vwr[' DOT Proper Ship Name'][i] = DOT_PSN
+            vwr[' Type of Outside Container Used'][i] = 'Box'
+            vwr[' Inner Bottles Pressure Tested?'][i] = 'No'
+            vwr[' Inner Bottle Material'][i] = 'Plastic'
+            vwr[' CAS#'][i] = cas_number
+            vwr[' If a Chemical, CWC?'][i] = 'No'
+            vwr[' Regulated by DEA or TTB?'][i] = 'No'
+            vwr[' Regulated by Health Canada as a Precursor Chemical?'][i] = 'No'
+            vwr[' Certificate of Analysis'][i] = 'Y'
+            vwr[' Certificate of Sterility'][i] = 'No'
+            vwr[' Certificate of Quality/Conformance'][i] = 'No'
+            vwr[' Electrical Certification Code'][i] = 'N/A'
+            vwr[' Electrical w/Motors'][i] = 'N/A'
+            vwr[' Drop Ship Fee?'][i] = 'No'
+            vwr[' Air Eligible?'][i] = 'Y'
             
             if not lot_info.empty:
                 creation_date = np.datetime64(lot_info['Creation date -'].values[0])
@@ -478,36 +513,38 @@ def fillVWR_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, 
                 shelf_life = expiration_date - creation_date
                 shelf_life = shelf_life.astype('timedelta64[M]')/np.timedelta64(1, 'M')
                 if shelf_life > 0:
-                    vwr[109][i] = shelf_life
+                    vwr[' Dated Shelf Life?'][i] = shelf_life
             
-            vwr[110][i] = 'No'
+            vwr[' If dated, returnable?'][i] = 'No'
             
             if type(storage_temp) == str:
                 if storage_temp == 'AM':
-                    vwr[111][i] = 'C'
+                    vwr[' Storage Temp Requirement'][i] = 'C'
                 elif storage_temp == 'FR':
-                    vwr[111][i] = 'A'
+                    vwr[' Storage Temp Requirement'][i] = 'A'
                 # elif '-70' in storage_temp or '-80' in storage_temp:
                 #     vwr[111][i] = 'D'
                 elif storage_temp == 'RF':
-                    vwr[111][i] = 'B'
+                    vwr[' Storage Temp Requirement'][i] = 'B'
                 elif storage_temp == '70' or storage_temp == '80':
-                    vwr[111][i] = 'D'
+                    vwr[' Storage Temp Requirement'][i] = 'D'
                 # else:
                 #     vwr[111][i] = storage_temp
             
-            vwr[164][i] = 'N'
+            vwr[" Children's Product?"][i] = 'N'
+
 
     new_vwr = opxl.load_workbook('forms/vwr_form.xlsx')
     vwr_sheet = new_vwr.active
-    if vwr_sheet.max_row < skus.max_row:
-        for j in range(skus.max_row - vwr_sheet.max_row):
+    if vwr_sheet.max_row < skus.max_row+4:
+        for j in range(skus.max_row - vwr_sheet.max_row + 4):
             vwr_sheet.insert_rows(vwr_sheet.max_row-1)
-    i = 1
+    i = 0
     for row in vwr_sheet.iter_rows(min_row=5):
         if i < skus.max_row:
-            for j in range(4, len(vwr.columns)):
-                row[j].value = vwr[j][i+3]
+            for j in range(4, len(vwr.columns)-1):
+                # print(i, j)
+                row[j].value = vwr.iloc[i+3, j]
         else:
             break
         i = i+1
@@ -515,18 +552,24 @@ def fillVWR_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, 
     # new_vwr.save('../../outputs/old_product_outputs/old_vwr_output.xlsx')
     new_vwr.save('outputs/old_product_outputs/old_vwr_output.xlsx')
 
+    return vwr
+
 def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, origin, magento_sept):
     thomas = pd.read_excel('forms/thomas_form.xlsx', dtype = object)
-    thomas.columns = np.arange(len(thomas.columns))
+    # thomas.columns = np.arange(len(thomas.columns))
+    # thomas.columns = thomas.iloc[3]
+    thomas = columnize(thomas, 4, 3)
+    new_columns = [i.strip() if type(i) == str else i for i in thomas.columns]
+    thomas.columns = new_columns
     wb = opxl.load_workbook(filename)
     # wb = opxl.load_workbook('Output for Thomas form.xlsx')
     # skus = wb['Fisher']
     skus = wb.active
     for i in range(2, skus.max_row+1):
-        thomas.loc[i+19, 1] = str(skus['A'+str(i)].value)
+        thomas.loc[i+19, 'MFR. NUMBER'] = str(skus['A'+str(i)].value)
         
     for i in range(21, skus.max_row+20):
-        sku = thomas[1][i]
+        sku = thomas['MFR. NUMBER'][i]
         product_info = magento.loc[magento['sku'] == sku]
         lot_info = lot_master.loc[lot_master['Product number'] == sku]
         origin_info = origin.loc[origin['Product number'] == sku]
@@ -629,22 +672,15 @@ def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
             biochem_physiol_actions = product_info['biochem_physiol_actions'].values[0]
             storage_and_handling = product_info['storage_and_handling'].values[0]
             group_name = product_info['prms_group_name'].values[0]
-            #unspsc = product_info['unspsc'].values[0]
             img_link = product_info['base_image'].values[0]
             hazard_statements = product_info['hazard_statements'].values[0]
             keywords = product_info['meta_keywords'].values[0]
-            # storage_temp = product_info['storage_and_handling'].values[0]
             grade = product_info['grade'].values[0]
-            # pack_size_joined = product_info['pack_size_joined'].values[0]
             ph = product_info['ph'].values[0]
             weight_in_lb = new_magento.loc[new_magento['sku'] == sku]['weight'].values[0]
             purity = product_info['purity'].values[0]
             molecular_weight = product_info['molecular_weight'].values[0]
             key_applications = product_info['key_applications'].values[0]
-            
-    #         if type(quantity) == str:
-    #             quantity = int(quantity.split('x')[0])
-    #         weight_in_lb = convertWeightToPounds(pack_size, unit, quantity)
             
             if type(name) == str:
                 name = tidyDescription(name)
@@ -655,78 +691,78 @@ def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                         name = name + ' ' + str(pack_size_joined)
                 if len(name) > 40:
                     name = name[:40]
-                thomas[2][i] = name
+                thomas.loc[i, 'INVENTORY DESCRIPTION\n(40 character maximum including spaces)\nMUST include voltage of equipment\nand/or package size to clarify differences amongst products. \nWE CAN NOT ACCEPT DUPLICATE DESCRIPTIONS FOR DIFFERENT PRODUCTS - see Examples Tab'] = name
             
-            thomas[3][i] = 'EA'
-            thomas[4][i] = 1
+            thomas.loc[i, 'PURCHASE UNIT OF MEASURE\n(EA PK CS ETC.)'] = 'EA'
+            thomas.loc[i, 'SIZE QTY\nNumber needed Only'] = 1
             
             if type(price) != str:
                 if str(sku).startswith('11'):
-                    thomas[5][i] = 0.89*price
+                    thomas.loc[i, 'PUoM COST'] = 0.89*price
                 else:
-                    thomas[5][i] = 0.8*price
-                thomas[6][i] = price
+                    thomas.loc[i, 'PUoM COST'] = 0.8*price
+                thomas.loc[i, 'PUoM LIST'] = price
             
             if ship_temp == 'DI':
-                thomas[13][i] = 'Ice/Dry Ice'
-                thomas[14][i] = '$10.00'
-                thomas[15][i] = 'ITEM'
-                thomas[31][i] = 'DRY ICE'
+                thomas.loc[i, 'Type (Hazardous, Handling/Processing, Ice/Dry Ice, Container, Other)'] = 'Ice/Dry Ice'
+                thomas.loc[i, 'Amount'] = '$10.00'
+                thomas.loc[i, 'Per Item/Order?'] = 'ITEM'
+                thomas.loc[i, 'SHIPPING CONDITIONS \n(RT ICE DRY ICE)'] = 'DRY ICE'
             elif ship_temp == 'CP':
-                thomas[31][i] = 'ICE'
+                thomas.loc[i, 'SHIPPING CONDITIONS \n(RT ICE DRY ICE)'] = 'ICE'
             elif ship_temp == 'AM':
-                thomas[31][i] = 'RT'
+                thomas.loc[i, 'SHIPPING CONDITIONS \n(RT ICE DRY ICE)'] = 'RT'
             
             if type(cas_number) == str and len(cas_number) > 0:
-                thomas[17][i] = 'Chemicals'
-                thomas[52][i] = grade
-                # thomas[53][i] = pack_size_joined
-                thomas[54][i] = 'Bottle'
-                thomas[55][i] = cas_number
-                thomas[59][i] = ph
+                thomas.loc[i, 'Section\n(Supplies,\nInstruments,\nEquipment,\nChemicals)'] = 'Chemicals'
+                thomas.loc[i, 'Grade(s)'] = grade
+                # thomas.loc[i, 53] = pack_size_joined
+                thomas.loc[i, 'Pkg. Type\n(Bottle Poly)'] = 'Bottle'
+                thomas.loc[i, 'CAS #'] = cas_number
+                thomas.loc[i, 'pH\n(for Buffers & Standards)'] = ph
                 
-            thomas[21][i] = 'Y'
-            thomas[22][i] = 'NONE'
-            thomas[24][i] = country_of_origin
+            thomas.loc[i, 'DROP SHIP?\n(Y or N)'] = 'Y'
+            thomas.loc[i, 'Shipping or Drop minimums or penalties?\nIf yes please state'] = 'NONE'
+            thomas.loc[i, 'COUNTRY OF ORIGIN\n(Need only 1)'] = country_of_origin
             
             tariff_code = str(tariff_code)
             if len(tariff_code) >= 4:
-                thomas[23][i] = tariff_code
+                thomas.loc[i, 'HARMONIZATION CODE'] = tariff_code
             
             if weight_in_lb < 0.5:
-                thomas[25][i] = 7
-                thomas[26][i] = 4
-                thomas[27][i] = 5
-                thomas[28][i] = 0.081
+                thomas.loc[i, 'HEIGHT (IN.)'] = 7
+                thomas.loc[i, 'WIDTH (IN.)'] = 4
+                thomas.loc[i, 'LENGTH (IN.)'] = 5
+                thomas.loc[i, 'CUBIC FEET'] = 0.081
             elif weight_in_lb <= 1:
-                thomas[25][i] = 12
-                thomas[26][i] = 7
-                thomas[27][i] = 5
-                thomas[28][i] = 0.243
+                thomas.loc[i, 'HEIGHT (IN.)'] = 12
+                thomas.loc[i, 'WIDTH (IN.)'] = 7
+                thomas.loc[i, 'LENGTH (IN.)'] = 5
+                thomas.loc[i, 'CUBIC FEET'] = 0.243
             else:
-                thomas[25][i] = 12
-                thomas[26][i] = 12
-                thomas[27][i] = 12
-                thomas[28][i] = 1
+                thomas.loc[i, 'HEIGHT (IN.)'] = 12
+                thomas.loc[i, 'WIDTH (IN.)'] = 12
+                thomas.loc[i, 'LENGTH (IN.)'] = 12
+                thomas.loc[i, 'CUBIC FEET'] = 1
                 
-            thomas[29][i] = weight_in_lb
+            thomas.loc[i, 'lbs'] = weight_in_lb
             
             if type(storage_temp) == str:
                 if storage_temp == 'AM':
-                    thomas[32][i] = 'RT'
-                    thomas[33][i] = 'N/A'
+                    thomas.loc[i, 'STORAGE CONDITIONS \n(RT 4°C -20°C -80°C)'] = 'RT'
+                    thomas.loc[i, 'Refrigeration Requirements\n(Refrigerator or Freezer)'] = 'N/A'
                 elif storage_temp == 'FR':
-                    thomas[32][i] = '-20°C'
-                    thomas[33][i] = 'Freezer'
+                    thomas.loc[i, 'STORAGE CONDITIONS \n(RT 4°C -20°C -80°C)'] = '-20°C'
+                    thomas.loc[i, 'Refrigeration Requirements\n(Refrigerator or Freezer)'] = 'Freezer'
                 elif storage_temp == '70' or storage_temp == '80':
-                    thomas[32][i] = '-80°C'
-                    thomas[33][i] = 'Freezer'
+                    thomas.loc[i, 'STORAGE CONDITIONS \n(RT 4°C -20°C -80°C)'] = '-80°C'
+                    thomas.loc[i, 'Refrigeration Requirements\n(Refrigerator or Freezer)'] = 'Freezer'
                 elif storage_temp == 'RF':
-                    thomas[32][i] = '4°C'
-                    thomas[33][i] = 'Refrigerator'
+                    thomas.loc[i, 'STORAGE CONDITIONS \n(RT 4°C -20°C -80°C)'] = '4°C'
+                    thomas.loc[i, 'Refrigeration Requirements\n(Refrigerator or Freezer)'] = 'Refrigerator'
                 # else:
-                #     thomas[32][i] = storage_temp
-            #thomas[32][i] = storage_temp
+                #     thomas.loc[i, 32] = storage_temp
+            #thomas.loc[i, 32] = storage_temp
             
             if not lot_info.empty:
                 creation_date = np.datetime64(lot_info['Creation date -'].values[0])
@@ -734,25 +770,25 @@ def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                 shelf_life = expiration_date - creation_date
                 shelf_life = shelf_life.astype('timedelta64[D]')/np.timedelta64(1, 'D')
                 if shelf_life > 0:
-                    thomas[34][i] = str(shelf_life) + ' days'
+                    thomas.loc[i, 'SHELF LIFE'] = str(shelf_life) + ' days'
             
-            thomas[42][i] = 'D'
-            thomas[44][i] = 'No'
-            thomas[53][i] = pack_size_joined
+            thomas.loc[i, 'MSDS CODE \n( A B C OR D)'] = 'D'
+            thomas.loc[i, 'REPLACES  PART#\n(if applicable enter PT# being replaced)'] = 'No'
+            thomas.loc[i, 'Pkg. Size\n(4 L)'] = pack_size_joined
             
             if type(name) == str:
                 name = tidyDescription(name)
                 if product_type == 'configurable':
-                    thomas[64][i] = name + ' ' + str(pack_size_joined)
+                    thomas.loc[i, 'WEBSITE DESCRIPTION\n\nThis is a simple line listing description.\ninclude voltage of equipment \nWE CAN NOT ACCEPT DUPLICATE DESCRIPTIONS FOR DIFFERENT PRODUCTS - see Examples Tab'] = name + ' ' + str(pack_size_joined)
                 else:
-                    thomas[64][i] = name
+                    thomas.loc[i, 'WEBSITE DESCRIPTION\n\nThis is a simple line listing description.\ninclude voltage of equipment \nWE CAN NOT ACCEPT DUPLICATE DESCRIPTIONS FOR DIFFERENT PRODUCTS - see Examples Tab'] = name
             
-            thomas[65][i] = 'N/A'
+            thomas.loc[i, 'If Yes please provide mfr. number or product to group with'] = 'N/A'
 
             if type(description) == str and len(description) > 0:
-                thomas[66][i] = description
+                thomas.loc[i, "Plain text or HTML format as shown in the example.\nLarger product adds (more than 5000 individual items) may require a Data Pull. For questions, contact Mike Kortonick in Web Operations: MikeK@thomassci.com or 856-340-8166\nCOPY refers to the overall write up for the entire product block on Thomas' website.\nSee examples below."] = description
             elif not product_info_sept.empty:
-                thomas[66][i] = product_info_sept['application_notes'].values[0]
+                thomas.loc[i, "Plain text or HTML format as shown in the example.\nLarger product adds (more than 5000 individual items) may require a Data Pull. For questions, contact Mike Kortonick in Web Operations: MikeK@thomassci.com or 856-340-8166\nCOPY refers to the overall write up for the entire product block on Thomas' website.\nSee examples below."] = product_info_sept['application_notes'].values[0]
             
             specifications = ''
             if type(purity) == str and len(purity) > 0:
@@ -818,12 +854,12 @@ def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                     specifications = specifications + '\n'
                 specifications = specifications + 'Format: ' + format_value
             
-            thomas[67][i] = specifications
+            thomas.loc[i, 'Plain text or HTML format; \nor prodvide hyperlink to specifications'] = specifications
             
             if type(keywords) == str:
-                thomas[68][i] = keywords.replace(',', ' ')
+                thomas.loc[i, 'Synonyms Nouns and Adjectives used to find the product in a catalog or website'] = keywords.replace(',', ' ')
             
-            # thomas[69][i] = img_link
+            # thomas.loc[i, 69] = img_link
             
     new_thomas = opxl.load_workbook('forms/thomas_form.xlsx')
     thomas_sheet = new_thomas.active
@@ -834,7 +870,7 @@ def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
     for row in thomas_sheet.iter_rows(min_row=23):
         if i < skus.max_row:
             for j in range(len(thomas.columns)):
-                row[j].value = thomas[j][i+2]
+                row[j].value = thomas.iloc[i+2, j]
         else:
             break
         i = i+1
@@ -1412,42 +1448,53 @@ def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_i
     else:
         return ''
 
-def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, magento_sept, unspsc_codes, origin):
+def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, magento_sept, unspsc_codes, origin, images):
     authoring_file = pd.ExcelFile(filename)
 
     authoring = pd.read_excel(authoring_file, 'Core_Content', dtype=object)
-    authoring.columns = np.arange(len(authoring.columns))
+    authoring.columns = authoring.iloc[2]
+    authoring.columns = [i.strip() for i in authoring.columns]
 
     attributes = pd.read_excel(authoring_file, 'Category_Attributes', dtype=object)
-    attributes.columns = np.arange(len(attributes.columns))
+    attributes.columns = attributes.iloc[2]
+    attributes.columns = [i.strip() for i in attributes.columns]
         
     for i in range(3, len(authoring)):
-        sku = authoring[3][i]
+        sku = authoring['manufacturerPartNumber'][i]
         product_info = magento.loc[magento['sku'] == sku]
+        product_info_sept = magento_sept.loc[magento_sept['sku'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
+        images_info = images.loc[images['sku'] == sku]
         if not product_info.empty:
             name = product_info['name'].values[0]
             short_description = product_info['short_description'].values[0]
             description = product_info['description'].values[0]
-            image = product_info['base_image'].values[0]
             keywords = product_info['meta_keywords'].values[0]
+            pack_size_joined = product_info['pack_size_joined'].values[0]
+
+            if not images_info.empty:
+                image = images['base_image'].values[0]
+            else:
+                image = ''
             
-            authoring[8][i] = name
-            authoring[9][i] = short_description
-            authoring[11][i] = description
-            authoring[13][i] = sku
-            authoring[19][i] = keywords
+            if type(pack_size_joined) == str:
+                authoring['productTitle'][i] = name.replace(pack_size_joined, '')
+            else:
+                authoring['productTitle'][i] = name
+                
+            authoring['skuDifferentiatorText'][i] = name
+            authoring['teaserText'][i] = short_description
+            authoring['productFeatures'][i] = description
+            authoring['Image'][i] = image
+            authoring['keywords'][i] = keywords
         
         if not prms_info.empty:
             un_number = prms_info['UN#'].values[0]
             
-            authoring[28][i] = un_number
-    
-    
+            authoring['alerts'][i] = un_number
     
     for i in range(3, len(attributes)-1):
-        sku = attributes[2][i]
-        # print(sku)
+        sku = attributes['manufacturerPartNumber'][i]
         product_info = new_magento.loc[new_magento['sku'] == sku]
         product_info_sept = magento_sept.loc[magento_sept['sku'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
@@ -1455,25 +1502,27 @@ def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, mage
         unspsc_info = unspsc_codes.loc[unspsc_codes['Part Number'] == sku]
         origin_info = origin.loc[origin['Product number'] == sku]
         
-        attribute_name = attributes[7][i]
+        attribute_name = attributes['Attribute_Name'][i]
         
-        abcam_info = getAbcamData(sku, magento_sept)
+        # abcam_info = getAbcamData(sku, magento_sept)
+        abcam_info = None # replace this
 
-        attributes[11][i] = attributeLookup(attribute_name, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento)
+        attributes['Values'][i] = attributeLookup(attribute_name, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento)
+        # add this back
 
     wb_enrichment = opxl.load_workbook(filename)
     core_content = wb_enrichment['Core_Content']
     i = 3
     for row in core_content.iter_rows(min_row=5):
         for j in range(len(authoring.columns)):
-            row[j].value = authoring[j][i]
+            row[j].value = authoring.iloc[i, j]
         i = i+1
     
     attribute_sheet = wb_enrichment['Category_Attributes']
     i = 3
     for row in attribute_sheet.iter_rows(min_row=5):
         if i < len(attributes):
-            row[11].value = attributes[11][i]
+            row[11].value = attributes['Values'][i]
         else:
             break
         i = i+1
@@ -1482,9 +1531,8 @@ def fillFisher_Enrichment(filename, magento, new_magento, lot_master, prms, mage
     # wb_enrichment.save('../../outputs/old_product_outputs/fisher_enrichment_output.xlsx')
 
 def fillVWR_Enrichment_Antibodies(enrichment, magento, prms):
-
-    for i in range(3, len(enrichment)):
-        sku = enrichment[5][i]
+    for i in range(14, len(enrichment)):
+        sku = enrichment.loc[i, 'Supplier Cat. No.']
         product_info = magento.loc[magento['sku'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
         
@@ -1493,25 +1541,25 @@ def fillVWR_Enrichment_Antibodies(enrichment, magento, prms):
             storage_temp = prms_info['Storage Temp'].values[0]
             
             if ship_temp == 'CP':
-                enrichment[36][i] = '2C to 8C'
+                enrichment.loc[i, 'Shipping Temperature'] = '2C to 8C'
             elif ship_temp == 'DI':
-                enrichment[36][i] = '-30C to -2C'
+                enrichment.loc[i, 'Shipping Temperature'] = '-30C to -2C'
             elif ship_temp == 'AM':
-                enrichment[36][i] = '15C to 30C'
+                enrichment.loc[i, 'Shipping Temperature'] = '15C to 30C'
                 
             if storage_temp == 'AM':
-                enrichment[35][i] = '15C to 30C'
+                enrichment.loc[i, 'Storage Temperature'] = '15C to 30C'
             elif storage_temp == 'FR':
-                enrichment[35][i] = '-30C to -2C'
+                enrichment.loc[i, 'Storage Temperature'] = '-30C to -2C'
             elif storage_temp == 'RF':
-                enrichment[35][i] = '2C to 8C'
+                enrichment.loc[i, 'Storage Temperature'] = '2C to 8C'
             elif storage_temp == '70' or storage_temp == '80':
-                enrichment[35][i] = '-70C'
+                enrichment.loc[i, 'Storage Temperature'] = '-70C'
         
         if not product_info.empty:
             name = product_info['name'].values[0]
-            description = product_info['description'].values[0]
-            short_desc = product_info['short_description'].values[0]
+            # description = product_info['description'].values[0]
+            # short_desc = product_info['short_description'].values[0]
             pack_size_joined = product_info['pack_size_joined'].values[0]
             antibody_type = product_info['antibody_type'].values[0]
             host = product_info['host'].values[0]
@@ -1521,52 +1569,52 @@ def fillVWR_Enrichment_Antibodies(enrichment, magento, prms):
             immunogen = product_info['immunogen'].values[0]
             molecular_weight = product_info['molecular_weight'].values[0]
             purity = product_info['purity'].values[0]
-            application_notes = product_info['application_notes'].values[0]
+            # application_notes = product_info['application_notes'].values[0]
 
-            enrichment[6][i] = description
+            # enrichment.loc[i, 'Title / Short Description / Antibody Name'] = description
 
-            if type(short_desc) == str and len(short_desc) > 30:
-                enrichment[7][i] = short_desc[:30]
-            else:
-                enrichment[7][i] = short_desc
+            # if type(short_desc) == str and len(short_desc) > 30:
+            #     enrichment.loc[i, 'Short Description'] = short_desc[:30]
+            # else:
+            #     enrichment.loc[i, 'Short Description'] = short_desc
 
-            enrichment[8][i] = description
-            enrichment[10][i] = pack_size_joined
+            # enrichment.loc[i, 'Long Text Description'] = description
+            enrichment.loc[i, 'Size with unit'] = pack_size_joined
 
             if type(antibody_type) == str:
-                enrichment[13][i] = str(antibody_type).replace(' Antibody', '')
-                enrichment[17][i] = str(antibody_type).replace(' Antibody', '')
+                enrichment.loc[i, 'Type'] = str(antibody_type).replace(' Antibody', '')
+                enrichment.loc[i, 'Clonality'] = str(antibody_type).replace(' Antibody', '')
 
-            enrichment[14][i] = host
-            enrichment[16][i] = conjugate
+            enrichment.loc[i, 'Host'] = host
+            enrichment.loc[i, 'Conjugation'] = conjugate
             
             if type(clone_name) == str and len(clone_name) > 0:
-                enrichment[21][i] = 'Clone: ' + clone_name
+                enrichment.loc[i, 'Clone'] = 'Clone: ' + clone_name
                 
-            enrichment[23][i] = host
-            enrichment[26][i] = concentration
-            enrichment[27][i] = immunogen
-            enrichment[28][i] = molecular_weight
-            enrichment[30][i] = purity
+            enrichment.loc[i, 'Reactivity'] = host
+            enrichment.loc[i, 'Concentration'] = concentration
+            enrichment.loc[i, 'Immunogen'] = immunogen
+            enrichment.loc[i, 'Molecular Weight'] = molecular_weight
+            enrichment.loc[i, 'Purification Method'] = purity
 
             if 'ELISA' in name or 'elisa' in name:
-                enrichment[39][i] = 'Yes'
+                enrichment.loc[i, 'ELISA'] = 'Yes'
             else:
-                enrichment[39][i] = 'No'
+                enrichment.loc[i, 'ELISA'] = 'No'
 
-            enrichment[48][i] = application_notes
+            # enrichment['Application Notes'][i] = application_notes
 
-    new_enrichment = opxl.load_workbook('forms/vwr_enrichment_antibodies.xlsx')
+    new_enrichment = opxl.load_workbook('forms/GlobalProductEnrichmentFile_Antibodies (New).xlsx')
     sheet = new_enrichment.active
     if sheet.max_row < len(enrichment):
         sheet.append([''])
         for j in range(len(enrichment) - sheet.max_row + 4):
             sheet.insert_rows(sheet.max_row)
-    i = 3
-    for row in sheet.iter_rows(min_row=5):
+    i = 14
+    for row in sheet.iter_rows(min_row=16):
         if i < (len(enrichment)):
             for j in range(len(enrichment.columns)):
-                row[j].value = enrichment[j][i]
+                row[j].value = enrichment.iloc[i, j]
         else:
             break
         i += 1
@@ -1574,8 +1622,8 @@ def fillVWR_Enrichment_Antibodies(enrichment, magento, prms):
     new_enrichment.save('outputs/enrichment_outputs/vwr_enrichment_antibody_output.xlsx')
 
 def fillVWR_Enrichmnent_PPE(enrichment, magento, prms):
-    for i in range(3, len(enrichment)):
-        sku = enrichment[5][i]
+    for i in range(14, len(enrichment)):
+        sku = enrichment.loc[i, 'Supplier Cat. No.']
         product_info = magento.loc[magento['sku'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
         
@@ -1584,82 +1632,82 @@ def fillVWR_Enrichmnent_PPE(enrichment, magento, prms):
             storage_temp = prms_info['Storage Temp'].values[0]
             
             if ship_temp == 'CP':
-                enrichment[36][i] = '2C to 8C'
+                enrichment.loc[i, 'Shipping temperature'] = '2C to 8C'
             elif ship_temp == 'DI':
-                enrichment[36][i] = '-30C to -2C'
+                enrichment.loc[i, 'Shipping temperature'] = '-30C to -2C'
             elif ship_temp == 'AM':
-                enrichment[36][i] = '15C to 30C'
+                enrichment.loc[i, 'Shipping temperature'] = '15C to 30C'
                 
             if storage_temp == 'AM':
-                enrichment[35][i] = '15C to 30C'
+                enrichment.loc[i, 'Storage conditions'] = '15C to 30C'
             elif storage_temp == 'FR':
-                enrichment[35][i] = '-30C to -2C'
+                enrichment.loc[i, 'Storage conditions'] = '-30C to -2C'
             elif storage_temp == 'RF':
-                enrichment[35][i] = '2C to 8C'
+                enrichment.loc[i, 'Storage conditions'] = '2C to 8C'
             elif storage_temp == '70' or storage_temp == '80':
-                enrichment[35][i] = '-70C'
+                enrichment.loc[i, 'Storage conditions'] = '-70C'
         
         if not product_info.empty:
             name = product_info['name'].values[0]
             description = product_info['description'].values[0]
-            short_desc = product_info['short_description'].values[0]
+            # short_desc = product_info['short_description'].values[0]
             pack_size_joined = product_info['pack_size_joined'].values[0]
-            antibody_type = product_info['antibody_type'].values[0]
+            # antibody_type = product_info['antibody_type'].values[0]
             host = product_info['host'].values[0]
             conjugate = product_info['conjugate'].values[0]
-            clone_name = product_info['clone_name'].values[0]
+            # clone_name = product_info['clone_name'].values[0]
             concentration = product_info['concentration'].values[0]
-            immunogen = product_info['immunogen'].values[0]
+            # immunogen = product_info['immunogen'].values[0]
             molecular_weight = product_info['molecular_weight'].values[0]
             purity = product_info['purity'].values[0]
-            application_notes = product_info['application_notes'].values[0]
+            # application_notes = product_info['application_notes'].values[0]
             cas_number = product_info['cas_number'].values[0]
             
-            if type(short_desc) == str:
-                short_desc = tidyDescription(short_desc)
-                short_desc = ''.join([i for i in short_desc if i.isalnum() or i == ' '])
-                if len(short_desc) > 30:
-                    enrichment[6][i] = short_desc[:30]
-                else:
-                    enrichment[6][i] = short_desc
+            # if type(short_desc) == str:
+            #     short_desc = tidyDescription(short_desc)
+            #     short_desc = ''.join([i for i in short_desc if i.isalnum() or i == ' '])
+            #     if len(short_desc) > 30:
+            #         enrichment.loc[i, 'short Description'] = short_desc[:30]
+            #     else:
+            #         enrichment.loc[i, 'short Description'] = short_desc
                     
-            if type(description) == str:
-                description = tidyDescription(description)
-                description = ''.join([i for i in description if i.isalnum() or i == ' '])
-                enrichment[7][i] = description
+            # if type(description) == str:
+            #     description = tidyDescription(description)
+            #     description = ''.join([i for i in description if i.isalnum() or i == ' '])
+            #     enrichment['long Description'] = description
                 
-                if 'recombinant' in description or 'Recombinant' in description:
-                    enrichment[18][i] = 'recombinant'
+            if 'recombinant' in str(description) or 'Recombinant' in str(description):
+                enrichment.loc[i, 'Protein/ Peptide/ Enzyme Type'] = 'recombinant'
 
             if type(name) == str:
-                enrichment[8][i] = name + ' MP Biomedical'
+                # enrichment.loc[i, 'Product Title'][i] = name + ' MP Biomedical'
                 if 'protein' in name:
-                    enrichment[19][i] = 'protein'
+                    enrichment.loc[i, 'Product Class'] = 'protein'
                 elif 'enzyme' in name:
-                    enrichment[19][i] = 'enzyme'
+                    enrichment.loc[i, 'Product Class'] = 'enzyme'
                 elif 'peptide' in name:
-                    enrichment[19][i] = 'peptide'
+                    enrichment.loc[i, 'Product Class'] = 'peptide'
                 
-            enrichment[10][i] = pack_size_joined
+            enrichment.loc[i, 'Size with unit'] = pack_size_joined
                 
-            enrichment[21][i] = host
-            enrichment[23][i] = conjugate
-            enrichment[25][i] = cas_number
-            enrichment[27][i] = purity
-            enrichment[30][i] = molecular_weight
-            enrichment[31][i] = concentration
+            enrichment.loc[i, 'Species'] = host
+            enrichment.loc[i, 'Conjugation'] = conjugate
+            enrichment.loc[i, 'CAS No'] = cas_number
+            enrichment.loc[i, 'Purity'] = purity
+            enrichment.loc[i, 'Molecular Weight'] = molecular_weight
+            enrichment.loc[i, 'Concentration'] = concentration
             
-    new_enrichment = opxl.load_workbook('forms/vwr_enrichment_ppe.xlsx')
+    new_enrichment = opxl.load_workbook('forms/GlobalProductEnrichmentFile_Proteins_Peptides_Enzymes (New).xlsx')
     sheet = new_enrichment.active
     if sheet.max_row < len(enrichment):
         sheet.append([''])
         for j in range(len(enrichment) - sheet.max_row + 4):
             sheet.insert_rows(sheet.max_row)
-    i = 3
-    for row in sheet.iter_rows(min_row=5):
+    i = 14
+    for row in sheet.iter_rows(min_row=16):
         if i < (len(enrichment)):
             for j in range(len(enrichment.columns)):
-                row[j].value = enrichment[j][i]
+                row[j].value = enrichment.iloc[i, j]
         else:
             break
         i += 1
@@ -1670,8 +1718,8 @@ def fillVWR_Enrichmnent_PPE(enrichment, magento, prms):
 
 def fillVWR_Enrichmnent_Sera(enrichment, magento):
 
-    for i in range(12, len(enrichment)):
-        sku = enrichment[4][i]
+    for i in range(11, len(enrichment)):
+        sku = enrichment['Supplier Part No.'][i]
         product_info = magento.loc[magento['sku'] == sku]
         
         if not product_info.empty:
@@ -1683,17 +1731,18 @@ def fillVWR_Enrichmnent_Sera(enrichment, magento):
             sterility = product_info['sterility'].values[0]
             keywords = product_info['keywords'].values[0]
             
-            if host == 'human' or host == 'Human':
-                enrichment[7][i] = 'Human'
-            elif type(host) == str and len(host) > 0:
-                enrichment[7][i] = 'Animal'
-                enrichment[8][i] = host
+            # if host == 'human' or host == 'Human':
+            #     enrichment.loc[i, 'Serum Source'] = 'Human'
+            # elif type(host) == str and len(host) > 0:
+            #     enrichment.loc[i, 'Serum Source'] = 'Animal'
+            if type(host) == str and len(host) > 0 and host != 'human' or host != "Human":
+                enrichment.loc[i, 'Animal Serum Type'] = host
             
-            enrichment[14][i] = sterility
-            enrichment[16][i] = pack_size_joined
-            enrichment[22][i] = application_notes
-            enrichment[23][i] = concentration
-            enrichment[24][i] = purity
+            enrichment.loc[i, 'Sterility'] = sterility
+            enrichment.loc[i, 'Size'] = pack_size_joined
+            enrichment.loc[i, 'Application'] = application_notes
+            enrichment.loc[i, 'Concentration'] = concentration
+            enrichment.loc[i, 'Purification'] = purity
             
             if type(keywords) == str:
                 keywords = keywords.replace(', ', ';')
@@ -1702,7 +1751,7 @@ def fillVWR_Enrichmnent_Sera(enrichment, magento):
                 keywords = keywords.replace('| ', ';')
                 keywords = keywords.replace(' | ', ';')
                 keywords = keywords.replace('|', ';')
-                enrichment[34][i] = keywords
+                enrichment.loc[i, 'Search Keywords'] = keywords
                 
     new_enrichment = opxl.load_workbook('forms/vwr_enrichment_sera.xlsx')
     sheet = new_enrichment.active
@@ -1710,11 +1759,11 @@ def fillVWR_Enrichmnent_Sera(enrichment, magento):
         sheet.append([''])
         for j in range(len(enrichment) - sheet.max_row + 12):
             sheet.insert_rows(sheet.max_row)
-    i = 12
-    for row in sheet.iter_rows(min_row=14):
+    i = 11
+    for row in sheet.iter_rows(min_row=13):
         if i < (len(enrichment)):
             for j in range(len(enrichment.columns)):
-                row[j].value = enrichment[j][i]
+                row[j].value = enrichment.iloc[i, j]
         else:
             break
         i += 1
@@ -1724,67 +1773,67 @@ def fillVWR_Enrichmnent_Sera(enrichment, magento):
     return enrichment
 
 def fillVWR_Enrichmnent_CCM(enrichment, magento, prms):
-
-    for i in range(12, len(enrichment)):
-        sku = enrichment[4][i]
+    for i in range(11, len(enrichment)):
+        sku = enrichment.loc[i, 'Supplier Part No.']
         product_info = magento.loc[magento['sku'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
         
         if not prms_info.empty:
-            ship_temp = prms_info['Ship Temp'].values[0]
+            # ship_temp = prms_info['Ship Temp'].values[0]
             storage_temp = prms_info['Storage Temp'].values[0]
                 
             if storage_temp == 'AM':
-                enrichment[16][i] = '15C to 30C'
+                enrichment.loc[i, 'Storage and stability'] = '15C to 30C'
             elif storage_temp == 'FR':
-                enrichment[16][i] = '-30C to -2C'
+                enrichment.loc[i, 'Storage and stability'] = '-30C to -2C'
             elif storage_temp == 'RF':
-                enrichment[16][i] = '2C to 8C'
+                enrichment.loc[i, 'Storage and stability'] = '2C to 8C'
             elif storage_temp == '70' or storage_temp == '80':
-                enrichment[16][i] = '-70C'
+                enrichment.loc[i, 'Storage and stability'] = '-70C'
         
         if not product_info.empty:
             name = product_info['name'].values[0]
             description = product_info['description'].values[0]
             short_desc = product_info['short_description'].values[0]
             pack_size_joined = product_info['pack_size_joined'].values[0]
-            host = product_info['host'].values[0]
-            concentration = product_info['concentration'].values[0]
-            purity = product_info['purity'].values[0]
+            # host = product_info['host'].values[0]
+            # concentration = product_info['concentration'].values[0]
+            # purity = product_info['purity'].values[0]
             application_notes = product_info['application_notes'].values[0]
-            sterility = product_info['sterility'].values[0]
-            keywords = product_info['keywords'].values[0]
+            # sterility = product_info['sterility'].values[0]
+            # keywords = product_info['keywords'].values[0]
             culture_media_type = product_info['culture_media_type'].values[0]
             formulation = product_info['formulation'].values[0]
+
             
-            enrichment[7][i] = culture_media_type
-            enrichment[9][i] = formulation
-            enrichment[10][i] = formulation
-            enrichment[11][i] = pack_size_joined
-            enrichment[12][i] = application_notes
+            enrichment.loc[i, 'Cell Culture Media Type'] = culture_media_type
+            enrichment.loc[i, 'Media Formulation'] = formulation
+            enrichment.loc[i, 'Media Format'] = formulation
+            enrichment.loc[i, 'Size'] = pack_size_joined
+            enrichment.loc[i, 'Application'] = application_notes
             
             if type(short_desc) == str:
                 short_desc = tidyDescription(short_desc)
-                enrichment[13][i] = short_desc
-                enrichment[22][i] = short_desc
+                enrichment.loc[i, 'Description'] = short_desc
+                enrichment.loc[i, 'Quick Summary Text\n(max. 100 words)'] = short_desc
             
-            enrichment[19][i] = 'MP Bio'
-            enrichment[21][i] = name
+            enrichment.loc[i, 'Brand Name'] = 'MP Bio'
+            enrichment.loc[i, 'Product Title\n(max. 100 characters)'] = name
             
             if type(description) == str:
                 description = tidyDescription(description)
-                enrichment[24][i] = description
+                enrichment.loc[i, 'Extended Exposition Text'] = description
     new_enrichment = opxl.load_workbook('forms/vwr_enrichment_ccm.xlsx')
     sheet = new_enrichment.active
     if sheet.max_row < len(enrichment):
         sheet.append([''])
         for j in range(len(enrichment) - sheet.max_row + 12):
             sheet.insert_rows(sheet.max_row)
-    i = 12
-    for row in sheet.iter_rows(min_row=14):
+    i = 11
+    for row in sheet.iter_rows(min_row=13):
         if i < (len(enrichment)):
             for j in range(len(enrichment.columns)):
-                row[j].value = enrichment[j][i]
+                row[j].value = enrichment.iloc[i, j]
         else:
             break
         i += 1
@@ -1795,36 +1844,40 @@ def fillVWR_Enrichmnent_CCM(enrichment, magento, prms):
 
 def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
 
-    for i in range(18, len(enrichment)):
-        sku = enrichment[4][i]
+    for i in range(22, len(enrichment)):
+        sku = enrichment['Supplier Part No.'][i]
         product_info = magento.loc[magento['sku'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
-        pubchem_data = getPubchemData(sku, magento)
+        try:
+            pubchem_data = getPubchemData(sku, magento)
+        except:
+            pubchem_data = None
+        # pubchem_data = None #change this
 
         if not pubchem_data == None:
             density = pubchem_data['Density']
             boiling_point = pubchem_data['Boiling Point']
 
             if (not density == None) and len(density) > 0 and (not 'None' in density):
-                enrichment[27][i] = density + " | pulled from Pubchem"
+                enrichment.loc[i, 'Density'] = density + " | pulled from Pubchem"
             if (not boiling_point == None) and len(boiling_point) > 0 and (not 'None' in boiling_point):
                 boiling_point = tidyDescription(boiling_point)
-                enrichment[28][i] = boiling_point + " | pulled from Pubchem"
+                enrichment.loc[i, 'Boiling Point'] = boiling_point + " | pulled from Pubchem"
         
         if not prms_info.empty:
             pack_size = prms_info['Pack Size'].values[0]
             storage_temp = prms_info['Storage Temp'].values[0]
     
-            enrichment[6][i] = pack_size
+            enrichment.loc[i, 'Size'] = pack_size
         
             if storage_temp == 'AM':
-                enrichment[31][i] = 'Ambient'
+                enrichment.loc[i, 'Storage Temperature'] = 'Ambient'
             elif storage_temp == 'FR':
-                enrichment[31][i] = 'Dry Ice'
+                enrichment.loc[i, 'Storage Temperature'] = 'Dry Ice'
             elif storage_temp == 'RF':
-                enrichment[31][i] = 'Cold Pack'
+                enrichment.loc[i, 'Storage Temperature'] = 'Cold Pack'
             elif storage_temp == '70' or storage_temp == '80':
-                enrichment[31][i] = 'Dry Ice'
+                enrichment.loc[i, 'Storage Temperature'] = 'Dry Ice'
         
         if not product_info.empty:
             name = product_info['name'].values[0]
@@ -1842,31 +1895,31 @@ def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
                 keywords = keywords.replace('| ', ';')
                 keywords = keywords.replace(' | ', ';')
                 keywords = keywords.replace('|', ';')
-                enrichment[8][i] = keywords
+                enrichment.loc[i, 'Search Keywords'] = keywords
             
             if type(name) == str:
                 name = tidyDescription(name)
                 name = ''.join([i for i in name if i.isalnum() or i == ' '])
-                enrichment[10][i]
+                enrichment.loc[i, 'Product Name (full)'] = name
                 
             if type(description) == str:
                 description = tidyDescription(description)
                 description = ''.join([i for i in description if i.isalnum() or i == ' '])
-                enrichment[11][i] = description
+                enrichment.loc[i, 'Product Text'] = description
                 
-            enrichment[14][i] = cas_number
-            enrichment[29][i] = melting_point
-    new_enrichment = opxl.load_workbook('forms/vwr_enrichment_chemicals.xlsx')
+            enrichment.loc[i, 'CAS'] = cas_number
+            enrichment.loc[i, 'Melting Point'] = melting_point
+    new_enrichment = opxl.load_workbook('forms/GlobalProductEnrichmentFile_Chemicals (New).xlsx')
     sheet = new_enrichment.active
     if sheet.max_row < len(enrichment):
         sheet.append([''])
         for j in range(len(enrichment) - sheet.max_row + 18):
             sheet.insert_rows(sheet.max_row)
-    i = 18
-    for row in sheet.iter_rows(min_row=20):
+    i = 22
+    for row in sheet.iter_rows(min_row=24):
         if i < (len(enrichment)):
             for j in range(len(enrichment.columns)):
-                row[j].value = enrichment[j][i]
+                row[j].value = enrichment.iloc[i, j]
         else:
             break
         i += 1
@@ -1876,15 +1929,20 @@ def fillVWR_Enrichmnent_Chemicals(enrichment, magento, prms):
     return enrichment
 
 def fillVWR_Enrichment(filename, magento):
-    enrichment = pd.read_excel('forms/vwr_enrichment_form.xlsx', dtype = object)
-    enrichment.columns = np.arange(len(enrichment.columns))
+    # enrichment = pd.read_excel('forms/vwr_enrichment_form.xlsx', dtype = object)
+    # enrichment.columns = np.arange(len(enrichment.columns))
+    # enrichment.columns = enrichment.iloc[6]
+    enrichment = pd.read_excel('forms/GlobalProductEnrichmentFile (New).xlsx')
+    enrichment.columns = enrichment.iloc[6]
+    new_columns = [i.strip() if type(i) == str else i for i in enrichment.columns]
+    enrichment.columns = new_columns
     wb = opxl.load_workbook(filename)
     skus = wb.active
     for i in range(2, skus.max_row+1):
-        enrichment.loc[i+9, 4] = str(skus['A'+str(i)].value)
+        enrichment.loc[i+9, 'Supplier Part No.'] = str(skus['A'+str(i)].value)
         
     for i in range(11, skus.max_row+10):
-        sku = enrichment[4][i]
+        sku = enrichment['Supplier Part No.'][i]
         product_info = magento.loc[magento['sku'] == sku]
         
         if not product_info.empty:
@@ -1893,12 +1951,12 @@ def fillVWR_Enrichment(filename, magento):
             name = product_info['name'].values[0].upper()
             description = product_info['description'].values[0]
             
-            enrichment[16][i] = 'MP Biomedical'
-            enrichment[17][i] = 'MP Biomedical'
-            enrichment[18][i] = tidyDescription(str(name))
-            enrichment[19][i] = tidyDescription(str(short_desc))
-            enrichment[20][i] = tidyDescription(str(description))
-            enrichment[21][i] = keywords
+            enrichment.loc[i, 'Brand Name'] = 'MP Biomedical'
+            enrichment.loc[i, 'Supplier Name'] = 'MP Biomedical'
+            enrichment.loc[i, 'Product Title\n(max. 100 characters)'] = tidyDescription(str(name))
+            enrichment.loc[i, 'Quick Summary Text\n(max. 100 words)'] = tidyDescription(str(short_desc))
+            enrichment.loc[i, 'Key Features/Benefits'] = tidyDescription(str(description))
+            enrichment.loc[i, 'Extended Exposition Text'] = keywords
             
     new_enrichment = opxl.load_workbook('forms/vwr_enrichment_form.xlsx')
     regulatory_sheet = new_enrichment.active
@@ -1910,13 +1968,14 @@ def fillVWR_Enrichment(filename, magento):
     for row in regulatory_sheet.iter_rows(min_row=13):
         if i < (skus.max_row+11):
             for j in range(len(enrichment.columns)):
-                row[j].value = enrichment[j][i]
+                row[j].value = enrichment.iloc[i, j]
         else:
             break
         i = i+1
 
     new_enrichment.save('outputs/enrichment_outputs/vwr_enrichment_output.xlsx')
     # new_enrichment.save('../../outputs/enrichment_outputs/vwr_enrichment_output.xlsx')
+
 
 def fillVWR_New(product_manager, prms2, e_marketing):
     vwr = pd.read_excel('forms/vwr_form.xlsx', dtype=object)

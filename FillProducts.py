@@ -92,9 +92,10 @@ def fisherEnrichmentHelper(filename):
         lbl_main['text'] = 'File not found... Please select a valid file'
         return
     database_sheets = importExcelSheets()
+    images = pd.read_excel('database_sheets/MPBIO_Products_Images_20_10_21.xlsx')
     lbl_main['text'] = 'Filling Fisher Enrichment Form (This one may take a while)'
     root.update()
-    fillFisher_Enrichment(filename, database_sheets[0], database_sheets[1], database_sheets[2], database_sheets[3], database_sheets[6], database_sheets[4], database_sheets[5])
+    fillFisher_Enrichment(filename, database_sheets[0], database_sheets[1], database_sheets[2], database_sheets[3], database_sheets[6], database_sheets[4], database_sheets[5], images)
     lbl_main['text'] = 'Done'
 
 def VWREnrichmentHelper(filename):
