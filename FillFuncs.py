@@ -846,31 +846,25 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
     fisher_file = pd.ExcelFile('forms/fisher_form.xlsx')
     fisher = pd.read_excel(fisher_file, 'General Info', dtype=object)
     regulatory = pd.read_excel(fisher_file, 'Regulatory', dtype=object)
-    regulatory.columns = np.arange(len(regulatory.columns))
-    fisher.columns = np.arange(len(fisher.columns))
+    new_columns = [i.strip() for i in regulatory.columns]
+    regulatory.columns = new_columns
+    new_columns = [i.strip() for i in fisher.columns]
+    fisher.columns = new_columns
     wb = opxl.load_workbook(filename)
     skus = wb.active
     for i in range(2, skus.max_row+1):
-        regulatory.loc[i-2, 1] = str(skus['A'+str(i)].value)
+        regulatory.loc[i-2, 'Supplier Catalog Number'] = str(skus['A'+str(i)].value)
     for i in range(2, skus.max_row+1):
-        fisher.loc[i-2, 1] = str(skus['A'+str(i)].value)
+        fisher.loc[i-2, 'Supplier Catalog Number'] = str(skus['A'+str(i)].value)
 
-    for i in range(len(regulatory)-1):
-        sku = regulatory[1][i]
+    for i in range(len(regulatory)):
+        sku = regulatory['Supplier Catalog Number'][i]
         product_info = magento.loc[magento['sku'] == sku]
         lot_info = lot_master.loc[lot_master['Product number'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
         unspsc_info = unspsc_codes.loc[unspsc_codes['Part Number'] == sku]
         product_info_july = new_magento.loc[new_magento['sku'] == sku]
-        product_info_sept = magento_sept.loc[magento_sept['sku'] == sku]
-
-        # if not product_info_sept.empty:
-        #     name = product_info_sept['name'].values[0].upper()
-        #     pack_size = product_info_sept['pack_size_joined'].values[0]
-        # else:
-        #     name = product_info['name'].values[0].upper()
-        #     pack_size = product_info['pack_size_joined'].values[0]
-        
+        product_info_sept = magento_sept.loc[magento_sept['sku'] == sku]     
 
         if not product_info_july.empty:
             tariff_code = product_info_july['tariff_code'].values[0]
@@ -885,7 +879,6 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                 pack_size = product_info['pack_size_joined'].values[0]
 
             if not prms_info.empty:
-                # name = prms_info['Product Name'].values[0]
                 price = prms_info['USD List Price'].values[0]
                 hazard_statements = prms_info['UN#'].values[0]
                 packing_group = prms_info['Packing Group'].values[0]
@@ -894,14 +887,8 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                 country_of_origin = prms_info['Country of Origin (most recent lot)'].values[0]
                 cas_number = product_info['cas_number'].values[0]
                 storage_temp = prms_info['Storage Temp'].values[0]
-    #             if type(country_of_origin) == str and len(country_of_origin) > 0:
-    #                 country_of_origin = pc.country_alpha3_to_country_alpha2(country_of_origin)
-    #                 fisher[109][i] = 'Y'
-    #             else:
-    #                 fisher[109][i] = 'N'
                 
             else:
-                # name = product_info['name'].values[0].upper()
                 price = product_info['price'].values[0]
                 packing_group = product_info['packing_group'].values[0]
                 ship_temp = product_info['ship_conditions'].values[0]
@@ -914,14 +901,10 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                 unspsc = product_info['unspsc'].values[0]
             
             short_desc = product_info['short_description'].values[0]
-            img_link = product_info['base_image'].values[0]
-            # pack_size = product_info['pack_size_numeric_value'].values[0]
-            # unit = product_info['pack_size_unit_of_measure'].values[0]
+
             quantity = product_info['lk_packaging_facet'].values[0]
             host = product_info['host'].values[0]
-            # tariff_code = product_info['tariff_code'].values[0]
             msds_avail = skus['B'+str(i+1)].value
-            # cas_number = product_info['cas_number'].values[0]
             DOT_PSN = 'N/A'
             hazard_class = product_info['hazard_class'].values[0]
             biochem_physiol_actions = product_info['biochem_physiol_actions'].values[0]
@@ -929,7 +912,6 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
             group_name = product_info['prms_group_name'].values[0]
             img_link = product_info['base_image'].values[0]
             keywords = product_info['meta_keywords'].values[0]
-            # storage_temp = product_info['storage_and_handling'].values[0]
 
             if type(pack_size) == str:
                 unit = ''.join([i for i in pack_size if not i.isdigit()])
@@ -937,69 +919,67 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                 unit = ''
             
             if sku.startswith('07') or sku.startswith('08') or sku.startswith('09') or sku.startswith('11'):
-                regulatory[3][i] = 'Diagnostics'
+                regulatory['Primary Commodity Code'][i] = 'Diagnostics'
             elif type(cas_number) == str and len(cas_number) > 0:
-                regulatory[3][i] = 'Chemicals'
+                regulatory['Primary Commodity Code'][i] = 'Chemicals'
             elif 'preps' in unit or 'Preps' in unit:
-                regulatory[3][i] = 'Consumables'
+                regulatory['Primary Commodity Code'][i] = 'Consumables'
             elif sku.startswith('02') or sku.startswith('03') or sku.startswith('04') or sku.startswith('05'):
-                regulatory[3][i] = 'Diagnostics'
+                regulatory['Primary Commodity Code'][i] = 'Diagnostics'
 
-            regulatory[4][i] = 99998
+            regulatory['Safety Data Sheet Code'][i] = 99998
             
             if type(storage_temp) == str:
                 if storage_temp == 'AM':
-                    regulatory[6][i] = 'GWN4'
+                    regulatory['Storage Code'][i] = 'GWN4'
                 elif storage_temp == 'FR' or storage_temp == '70' or storage_temp == '80':
-                    regulatory[6][i] = 'DFD1'
-                # elif '-70' in storage_temp or '-80' in storage_temp:
-                #     regulatory[6][i] = 'DFD1'
+                    regulatory['Storage Code'][i] = 'DFD1'
                 elif storage_temp == 'RF':
-                    regulatory[6][i] = 'RFC2'
+                    regulatory['Storage Code'][i] = 'RFC2'
                 else:
-                    regulatory[6][i] = storage_temp
+                    regulatory['Storage Code'][i] = storage_temp
             else:
-                regulatory[6][i] = 'GWN4'
+                regulatory['Storage Code'][i] = 'GWN4'
             
-            regulatory[8][i] = 'N'
-            regulatory[9][i] = 'N'
-            regulatory[11][i] = 'N'
-            regulatory[12][i] = 'N'
-            regulatory[14][i] = 'None'
-            regulatory[15][i] = 'NA'
+            regulatory['STERILE'][i] = 'N'
+            regulatory['Proposition 65'][i] = 'N'
+            regulatory['Latex'][i] = 'N'
+            regulatory['Lithium Battery'][i] = 'N'
+            regulatory['Medical Device'][i] = 'None'
+            regulatory['UPC - Standard'][i] = 'NA'
             
             tariff_code = str(tariff_code).replace('.', '')
             if len(tariff_code) >= 4:
-                regulatory[29][i] = tariff_code[:4] + '999999'
+                regulatory['Harmonized Tariff Schedule Code'][i] = tariff_code[:4] + '999999'
                 
-            regulatory[30][i] = 'N'
-            regulatory[31][i] = 'N'
-            regulatory[32][i] = 'N'
-            regulatory[35][i] = 'N'
-            regulatory[36][i] = 'N'
-            regulatory[37][i] = 'N'
-            regulatory[39][i] = 'N'
-            regulatory[40][i] = 'N'
-            regulatory[43][i] = 'N'
-            regulatory[58][i] = 'N'
-            regulatory[61][i] = 'N'
-            regulatory[62][i] = 'N'
-            regulatory[63][i] = 'N'
-            regulatory[64][i] = 'NA'
+            regulatory['REACH Compliant'][i] = 'N'
+            regulatory['RoHS Compliant'][i] = 'N'
+            regulatory['Mercury'][i] = 'N'
+            regulatory['Benzene %'][i] = 'N'
+            regulatory['Asbestos'][i] = 'N'
+            regulatory['Iodine'][i] = 'N'
+            regulatory['Radioactive Materials'][i] = 'N'
+            regulatory['Pesticides'][i] = 'N'
+            regulatory['Ethyl Alcohol'][i] = 'N'
+            regulatory['DEA List 1 Chemical or Drug'][i] = 'N'
+            regulatory['WHMIS Regulated?\n(Y/N)'][i] = 'N'
+            regulatory['Marine Pollutant'][i] = 'N'
+            regulatory['Is USMCA/CUSMA Certificate available?'][i] = 'N'
+            regulatory["Federal  or Int'l Regulations"][i] = 'NA'
                 
             if type(host) == str and len(host) > 0:
-                regulatory[44][i] = 'Y'
+                regulatory['Animal or Human Origin'][i] = 'Y'
             else:
-                regulatory[44][i] = 'N'
+                regulatory['Animal or Human Origin'][i] = 'N'
             
-            regulatory[47][i] = 'NA'
+            regulatory['MDL Number'][i] = 'NA'
 
             if type(cas_number) == str and not cas_number == 'Not applicable':
-                regulatory[48][i] = cas_number
-                regulatory[49][i] = 100
+                regulatory['Chemical Abstracts Number (CAS 1)'][i] = cas_number
+                regulatory['Chemical Abstracts Percentage(1)'][i] = 100
 
-    for i in range(len(fisher)-1):
-        sku = fisher[1][i]
+    for i in range(len(fisher)):
+        sku = fisher['Supplier Catalog Number'][i]
         product_info = magento.loc[magento['sku'] == sku]
         lot_info = lot_master.loc[lot_master['Product number'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
@@ -1017,7 +997,6 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
 
 
             if not prms_info.empty:
-                # name = prms_info['Product Name'].values[0]
                 price = prms_info['USD List Price'].values[0]
                 hazard_statements = prms_info['UN#'].values[0]
                 packing_group = prms_info['Packing Group'].values[0]
@@ -1026,13 +1005,12 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                 country_of_origin = prms_info['Country of Origin (most recent lot)'].values[0]
                 if type(country_of_origin) == str and len(country_of_origin) > 0:
                     country_of_origin = pc.country_alpha3_to_country_alpha2(country_of_origin)
-                    fisher[108][i] = 'Y'
-                    fisher[109][i] = 'USD'
+                    fisher['Canada Availability'][i] = 'Y'
+                    fisher['Currency'][i] = 'USD'
                 else:
-                    fisher[108][i] = 'N'
+                    fisher['Canada Availability'][i] = 'N'
                 
             else:
-                # name = product_info['name'].values[0].upper()
                 price = product_info['price'].values[0]
                 packing_group = product_info['packing_group'].values[0]
                 ship_temp = product_info['ship_conditions'].values[0]
@@ -1045,12 +1023,9 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
             
             short_desc = product_info['short_description'].values[0]
             img_link = product_info['base_image'].values[0]
-            # pack_size = product_info['pack_size_numeric_value'].values[0]
-            # unit = product_info['pack_size_unit_of_measure'].values[0]
             quantity = product_info['lk_packaging_facet'].values[0]
             host = product_info['host'].values[0]
             tariff_code = product_info['tariff_code'].values[0]
-            # msds_avail = skus['B'+str(i-1)]
             cas_number = product_info['cas_number'].values[0]
             DOT_PSN = 'NA'
             hazard_class = product_info['hazard_class'].values[0]
@@ -1063,26 +1038,26 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
             if not new_magento.loc[new_magento['sku'] == sku].empty:
                 weight_in_lb = new_magento.loc[new_magento['sku'] == sku]['weight'].values[0]
                 
-                fisher[18][i] = weight_in_lb
+                fisher['Standard Unit Weight'][i] = weight_in_lb
             
                 if weight_in_lb < 0.5:
-                    fisher[19][i] = 7
-                    fisher[20][i] = 4
-                    fisher[21][i] = 5
-                    fisher[49][i] = 60
-                    fisher[50][i] = 36
+                    fisher['Standard Unit Length'][i] = 7
+                    fisher['Standard Unit Width'][i] = 4
+                    fisher['Standard Unit Height'][i] = 5
+                    fisher['Units on a Pallet'][i] = 60
+                    fisher['Pallet layers'][i] = 36
                 elif weight_in_lb <= 1:
-                    fisher[19][i] = 12
-                    fisher[20][i] = 7
-                    fisher[21][i] = 5
-                    fisher[49][i] = 18
-                    fisher[50][i] = 36
+                    fisher['Standard Unit Length'][i] = 12
+                    fisher['Standard Unit Width'][i] = 7
+                    fisher['Standard Unit Height'][i] = 5
+                    fisher['Units on a Pallet'][i] = 18
+                    fisher['Pallet layers'][i] = 36
                 else:
-                    fisher[19][i] = 12
-                    fisher[20][i] = 12
-                    fisher[21][i] = 12
-                    fisher[49][i] = 12
-                    fisher[50][i] = 15
+                    fisher['Standard Unit Length'][i] = 12
+                    fisher['Standard Unit Width'][i] = 12
+                    fisher['Standard Unit Height'][i] = 12
+                    fisher['Units on a Pallet'][i] = 12
+                    fisher['Pallet layers'][i] = 15
             
 
             if type(name) == str:
@@ -1093,29 +1068,23 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                         temp_name = temp_name + c
                 name = temp_name
                 if len(name) <= 30:
-                    fisher[2][i] = name
+                    fisher['Item Description - 30 Characters'][i] = name
                 else:
-                    fisher[2][i] = name[:30]
+                    fisher['Item Description - 30 Characters'][i] = name[:30]
                 
                 if len(name) <= 240:
-                    fisher[3][i] = name
+                    fisher['Item Description - 240 Characters'][i] = name
                 else:
-                    fisher[3][i] = name[:240]
-            # if type(short_desc) == str:
-            #     short_desc = tidyDescription(short_desc)
-            #     if len(short_desc) <= 240:
-            #         fisher[3][i] = short_desc
-            #     else:
-            #         fisher[3][i] = short_desc[:240]
+                    fisher['Item Description - 240 Characters'][i] = name[:240]
                     
-            fisher[15][i] = 'EA'
-            fisher[16][i] = 1
-            fisher[17][i] = 'EA'
+            fisher['Standard Unit'][i] = 'EA'
+            fisher['Standard Unit Quantity'][i] = 1
+            fisher['Unit of Use'][i] = 'EA'
 
             if type(pack_size) == str:
                 quant = ''.join([i for i in pack_size if i.isdigit()])
                 unit = ''.join([i for i in pack_size if not i.isdigit()])
-                fisher[22][i] = quant
+                fisher['Package Size Quantity'][i] = quant
                 if 'preps' in unit or 'Preps' in unit:
                     unit = 'PP'
                 elif 'mL' in unit or 'ml' in unit:
@@ -1136,40 +1105,28 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                     unit = 'LT'
                 else:
                     unit = 'UN'
-                fisher[23][i] = unit
+                fisher['Package Size Unit'][i] = unit
             
             if type(price) != str:
-                fisher[32][i] = price*0.7
-                fisher[33][i] = price
+                fisher['Standard Unit Cost'][i] = price*0.7
+                fisher['Standard Unit List'][i] = price
             
-            fisher[35][i] = '30'
-            fisher[36][i] = '31/DEC/2020'
+            fisher['Discount %'][i] = '30'
+            fisher['Pricing Expiration Date'][i] = '31/DEC/2020'
             
-            fisher[41][i] = unspsc
+            fisher['UNSPSC Code'][i] = unspsc
             
             if type(hazard_statements) == str and len(hazard_statements) > 0:
-                fisher[43][i] = 'Y'
+                fisher['Hazardous'][i] = 'Y'
             else:
-                fisher[43][i] = 'N'
+                fisher['Hazardous'][i] = 'N'
             
-            fisher[44][i] = hazard_statements
-            fisher[45][i] = hazard_class
-            fisher[47][i] = packing_group
-                      
-            # if not lot_info.empty:
-            #     creation_date = np.datetime64(lot_info['Creation date -'].values[0])
-            #     expiration_date = np.datetime64(lot_info['Expiration date -'].values[0])
-            #     shelf_life = expiration_date - creation_date
-            #     shelf_life = shelf_life.astype('timedelta64[D]')/np.timedelta64(1, 'D') ########################## PLEASE DO NOT DELETE ############################################
-            #     if shelf_life > 0:
-            #         fisher[54][i] = 'Y'
-            #         fisher[55][i] = shelf_life
-            #     else:
-            #         fisher[54][i] = 0
-            #         fisher[55][i] = 0
+            fisher['UN/NA#'][i] = hazard_statements
+            fisher['Hazard Class'][i] = hazard_class
+            fisher['Packing Group'][i] = packing_group
 
-            fisher[54][i] = 'N'
-            fisher[55][i] = 0
+            fisher['Shelf Life'][i] = 'N'
+            fisher['Shelf Life  (Days)'][i] = 0
             
             if type(keywords) == str:
                 keywords = keywords.split(',')
@@ -1179,24 +1136,22 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                 keywords = list(set(keywords))
                 j = 0
                 while j<5 and j<len(keywords):
-                    # if len(keywords[j]) > 11:
-                    #     fisher[j+6][i] = keywords[j][:11]
-                    # else:
-                    fisher[j+6][i] = keywords[j]
+                    fisher.iloc[i, j+6] = keywords[j]
+                    fisher.iloc[i, j+6] = keywords[j]
                     j = j+1
                     
-            fisher[14][i] = '25'
-            fisher[93][i] = 'N'
-            fisher[42][i] = country_of_origin
-            fisher[51][i] = 'Build to Order'
-            fisher[52][i] = 'NA'
-            fisher[58][i] = 'Y'
-            fisher[59][i] = 'N'
-            fisher[61][i] = 'Y'
-            fisher[62][i] = 1
-            fisher[63][i] = 'Y'
-            fisher[65][i] = 'Y'
-            fisher[78][i] = 'N'
+            fisher['Manufacturer Lead-Time'][i] = '25'
+            fisher['Green Product'][i] = 'N'
+            fisher['Country of Origin'][i] = country_of_origin
+            fisher['Build to Stock or Build to Order'][i] = 'Build to Order'
+            fisher['Serial / Lot Control'][i] = 'NA'
+            fisher['Expiration'][i] = 'Y'
+            fisher['Product Info on Shipping Box'][i] = 'N'
+            fisher['Expiration Info on Shipping Box'][i] = 'Y'
+            fisher['Minimum Order Quantity'][i] = 1
+            fisher['Certificates Available'][i] = 'Y'
+            fisher['Certificate of Analysis'][i] = 'Y'
+            fisher['Installation'][i] = 'N'
             
             
     new_fisher = opxl.load_workbook('forms/fisher_form.xlsx')
@@ -1212,23 +1167,24 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
     i = 0
     for row in gen_sheet.iter_rows(min_row=2):
         if i < len(fisher):
-            for j in range(len(fisher.columns)):
-                if not fisher[j][i] == 'None':
-                    row[j].value = fisher[j][i]
+            for j in range(len(fisher.columns)-1):
+                if not fisher.iloc[i, j] == 'None':
+                    row[j].value = fisher.iloc[i, j]
         else:
             break
         i = i+1
     i = 0
     for row in regulatory_sheet.iter_rows(min_row=2):
         if i < len(regulatory):
-            for j in range(len(regulatory.columns)):
-                if not fisher[j][i] == 'None':
-                    row[j].value = regulatory[j][i]
+            for j in range(len(regulatory.columns)-1):
+                if not fisher.iloc[i, j] == 'None':
+                    row[j].value = regulatory.iloc[i, j]
         else:
             break
         i = i+1
 
     new_fisher.save('outputs/old_product_outputs/old_fisher_output.xlsx')
+    return fisher
     # new_fisher.save('../../outputs/old_product_outputs/old_fisher_output.xlsx')
 
 def attributeLookup(attribute, product_info, product_info_sept, prms_info, lot_info, unspsc_info, origin_info, abcam_info, sku, magento):
@@ -2652,3 +2608,144 @@ def fillFisher_New(product_manager, prms2, e_marketing):
 
     # new_fisher.save('../../outputs/new_product_outputs/new_fisher_output.xlsx')
     new_fisher.save('outputs/new_product_outputs/new_fisher_output.xlsx')
+
+def fillGlobalProductRevision(filename, magento, new_magento, lot_master, prms, unspsc_codes, origin, magento_sept):
+    revision = pd.read_excel('forms/GlobalProductRevisionFile (New).xlsx')
+    revision.columns = revision.iloc[7]
+    new_columns = [i.strip() if type(i) == str else i for i in revision.columns]
+    revision.columns = new_columns
+    wb = opxl.load_workbook(filename)
+    skus = wb.active
+    for i in range(2, skus.max_row+1):
+        revision.loc[i+10, 'Supplier Part No.'] = str(skus['A'+str(i)].value)
+
+    for i in range(12, len(revision)):
+        sku = revision.loc[i, 'Supplier Part No.']
+        product_info_sept = magento_sept.loc[magento_sept['sku'] == sku]
+
+        if not product_info_sept.empty:
+            keywords = product_info_sept['keywords'].values[0]
+            name = product_info_sept['name'].values[0]
+            description = product_info_sept['description'].values[0]
+
+            if type(keywords) == str:
+                keywords = keywords.replace(', ', ';')
+                keywords = keywords.replace(',', ';')
+                keywords = keywords.replace(' |', ';')
+                keywords = keywords.replace('| ', ';')
+                keywords = keywords.replace(' | ', ';')
+                keywords = keywords.replace('|', ';')
+                revision.loc[i, 'Search Keywords'] = keywords
+            
+            revision.loc[i, 'Supplier Name'] = 'MP Biomedicals'
+
+            if type(name) == str:
+                revision.loc[i, 'Product Title\n(max. 100 characters)'] = tidyDescription(name)
+            
+            if type(description) == str:
+                revision.loc[i, 'Text related information'] = tidyDescription(description)
+                               
+    new_revision = opxl.load_workbook('forms/GlobalProductrevisionFile (New).xlsx')
+    sheet = new_revision.active
+    if sheet.max_row < len(revision):
+        sheet.append([''])
+        for j in range(len(revision) - sheet.max_row + 4):
+            sheet.insert_rows(sheet.max_row)
+    i = 12
+    for row in sheet.iter_rows(min_row=14):
+        if i < (len(revision)):
+            for j in range(len(revision.columns)):
+                row[j].value = revision.iloc[i, j]
+        else:
+            break
+        i += 1
+            
+    new_revision.save('outputs/revision_outputs/GlobalProductRevision_output.xlsx')
+
+def fillGlobalProductRevisionChemicals(filename, magento, new_magento, lot_master, prms, unspsc_codes, origin, magento_sept):
+    revision = pd.read_excel('forms/GlobalProductRevisionFile_Chemicals (New).xlsx')
+    revision.columns = revision.iloc[8]
+    new_columns = [i.strip() if type(i) == str else i for i in revision.columns]
+    revision.columns = new_columns
+    wb = opxl.load_workbook(filename)
+    skus = wb.active
+    for i in range(2, skus.max_row+1):
+        revision.loc[i+11, 'Supplier Part No.'] = str(skus['A'+str(i)].value)
+
+    for i in range(13, len(revision)):
+        sku = revision.loc[i, 'Supplier Part No.']
+        product_info_sept = magento_sept.loc[magento_sept['sku'] == sku]
+        prms_info = prms.loc[prms['SKU'] == sku]
+
+        if not prms_info.empty:
+            storage_temp = prms_info['Storage Temp'].values[0]
+                
+            if storage_temp == 'AM':
+                revision.loc[i, 'Storage Temperature'] = '15C to 30C'
+            elif storage_temp == 'FR':
+                revision.loc[i, 'Storage Temperature'] = '-30C to -2C'
+            elif storage_temp == 'RF':
+                revision.loc[i, 'Storage Temperature'] = '2C to 8C'
+            elif storage_temp == '70' or storage_temp == '80':
+                revision.loc[i, 'Storage Temperature'] = '-70C'
+
+        if not product_info_sept.empty:
+            keywords = product_info_sept['keywords'].values[0]
+            name = product_info_sept['name'].values[0]
+            description = product_info_sept['description'].values[0]
+            short_description = product_info_sept['short_description'].values[0]
+            pack_size_joined = product_info_sept['pack_size_joined'].values[0]
+            cas_number = product_info_sept['cas_number'].values[0]
+            mdl_number = product_info_sept['mdl_number'].values[0]
+            un_number = product_info_sept['un_number'].values[0]
+            packing_group = product_info_sept['packing_group'].values[0]
+            density = product_info_sept['density'].values[0]
+            boiling_point = product_info_sept['boiling_point'].values[0]
+            melting_point = product_info_sept['melting_point'].values[0]
+
+            if type(keywords) == str:
+                keywords = keywords.replace(', ', ';')
+                keywords = keywords.replace(',', ';')
+                keywords = keywords.replace(' |', ';')
+                keywords = keywords.replace('| ', ';')
+                keywords = keywords.replace(' | ', ';')
+                keywords = keywords.replace('|', ';')
+                revision.loc[i, 'Search Keywords'] = keywords
+
+            if type(name) == str:
+                revision.loc[i, 'Product Name'] = tidyDescription(name)
+            
+            if type(description) == str:
+                revision.loc[i, 'Product Text'] = tidyDescription(description)
+            
+            if type(short_description) == str:
+                revision.loc[i, 'Key Features/Benefits'] = tidyDescription(short_description)
+
+            revision.loc[i, 'Supplier Name'] = 'MP Biomedicals'
+            revision.loc[i, 'Size'] = pack_size_joined
+            revision.loc[i, 'CAS'] = cas_number
+            revision.loc[i, 'MDL'] = mdl_number
+            revision.loc[i, 'UN'] = un_number
+            revision.loc[i, 'Packing Group'] = packing_group
+            revision.loc[i, 'Density'] = density
+            revision.loc[i, 'Boiling Point'] = boiling_point
+            revision.loc[i, 'Melting Point'] = melting_point
+    
+    revision.columns = revision.columns.fillna('Blank')
+                               
+    new_revision = opxl.load_workbook('forms/GlobalProductRevisionFile_Chemicals (New).xlsx')
+    sheet = new_revision.active
+    if sheet.max_row < len(revision):
+        sheet.append([''])
+        for j in range(len(revision) - sheet.max_row + 4):
+            sheet.insert_rows(sheet.max_row)
+    i = 14
+    for row in sheet.iter_rows(min_row=16):
+        if i < (len(revision)):
+            for j in range(len(revision.columns)):
+                row[j].value = revision.iloc[i, j]
+        else:
+            break
+        i += 1
+            
+    new_revision.save('outputs/revision_outputs/GlobalProductRevisionChemicals_output.xlsx')

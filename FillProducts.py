@@ -7,7 +7,7 @@ import pycountry_convert as pc
 import datetime as dt
 import tkinter as tk
 from tkinter import filedialog
-from FillFuncs import fillVWR_Old, fillThomas_Old, fillFisher_Old, fillFisher_Enrichment, fillVWR_Enrichment, fillVWR_New, fillThomas_New, fillFisher_New, VWREnrichmentDriver
+from FillFuncs import fillVWR_Old, fillThomas_Old, fillFisher_Old, fillFisher_Enrichment, fillVWR_Enrichment, fillVWR_New, fillThomas_New, fillFisher_New, VWREnrichmentDriver, fillGlobalProductRevision, fillGlobalProductRevisionChemicals
 
 
 def importExcelSheets():
@@ -86,8 +86,6 @@ def fillThomas_Old_Helper(filename):
     fillThomas_Old(filename, database_sheets[0], database_sheets[1], database_sheets[2], database_sheets[3], database_sheets[4], database_sheets[5], database_sheets[6])
     lbl_main['text'] = 'All Done...'
     root.update()
-
-
 
 def fisherEnrichmentHelper(filename):
     if filename == '':
@@ -189,6 +187,26 @@ def fillAll_New_Helper(filename):
     fillThomas_New(database_sheets[0], database_sheets[1], database_sheets[2])
     lbl_main['text'] = 'Done'
 
+def fillRevision_Normal_Helper(filename):
+    if filename == '':
+        lbl_main['text'] = 'File not found... Please select a valid file'
+        return
+    database_sheets = importExcelSheets()
+    lbl_main['text'] = 'Filling Global Product Revision...'
+    root.update()
+    fillGlobalProductRevision(filename, database_sheets[0], database_sheets[1], database_sheets[2], database_sheets[3], database_sheets[4], database_sheets[5], database_sheets[6])
+    lbl_main['text'] = 'Done'
+
+def fillRevision_Chemicals_Helper(filename):
+    if filename == '':
+        lbl_main['text'] = 'File not found... Please select a valid file'
+        return
+    database_sheets = importExcelSheets()
+    lbl_main['text'] = 'Filling Global Product Revision Chemicals...'
+    root.update()
+    fillGlobalProductRevisionChemicals(filename, database_sheets[0], database_sheets[1], database_sheets[2], database_sheets[3], database_sheets[4], database_sheets[5], database_sheets[6])
+    lbl_main['text'] = 'Done'
+
 def packNewButtons():
     bt_VWR_new.pack(side=tk.TOP)
     bt_Fisher_new.pack(side=tk.TOP)
@@ -201,11 +219,24 @@ def packOldButtons():
     bt_Thomas_old.pack(side=tk.TOP)
     bt_all_old.pack(side=tk.TOP)
 
+def packRevisionButtons():
+    bt_fill_revision_normal.pack(side=tk.LEFT)
+    bt_fill_revision_chemicals.pack(side=tk.RIGHT)
+
 root = tk.Tk()
+
+canvas = tk.Canvas(root)
+canvas.grid(columnspan=4, rowspan=2)
+
 frame_label = tk.Frame(root)
 frame_buttons = tk.Frame(root)
 
-frame_old = tk.Frame(frame_buttons)
+frame_buttons_middle_left = tk.Frame(frame_buttons)
+frame_buttons_middle_right = tk.Frame(frame_buttons)
+frame_buttons_left = tk.Frame(frame_buttons)
+frame_buttons_right = tk.Frame(frame_buttons)
+
+frame_old = tk.Frame(frame_buttons_left)
 frame_old_top = tk.Frame(frame_old)
 frame_old_bottom = tk.Frame(frame_old)
 frame_old_VWR = tk.Frame(frame_old_bottom)
@@ -213,17 +244,28 @@ frame_old_Fisher = tk.Frame(frame_old_bottom)
 frame_old_Thomas = tk.Frame(frame_old_bottom)
 frame_old_all = tk.Frame(frame_old_bottom)
 
-frame_enrichment = tk.Frame(frame_buttons)
-frame_new = tk.Frame(frame_buttons)
+frame_enrichment = tk.Frame(frame_buttons_right)
+frame_new = tk.Frame(frame_buttons_middle_left)
 frame_enrichment_top = tk.Frame(frame_enrichment)
 frame_enrichment_bottom = tk.Frame(frame_enrichment)
 frame_enrichment_fisher = tk.Frame(frame_enrichment_bottom)
 frame_enrichment_VWR = tk.Frame(frame_enrichment_bottom)
 
-frame_label.pack(side=tk.TOP)
-frame_buttons.pack(side=tk.BOTTOM)
+frame_revision = tk.Frame(frame_buttons_middle_right)
+frame_revision_top = tk.Frame(frame_revision)
+frame_revision_bottom = tk.Frame(frame_revision)
 
-frame_old.pack(side=tk.LEFT)
+frame_label.grid(row=0, columnspan=4)
+frame_buttons.grid(row=1, columnspan=4, rowspan=1)
+frame_buttons_left.grid(column=0, row=1)
+frame_buttons_middle_left.grid(column=1, row=1)
+frame_buttons_middle_right.grid(column=2, row=1)
+frame_buttons_right.grid(column=3, row=1)
+
+frame_revision_top.pack(side=tk.TOP)
+frame_revision_bottom.pack(side=tk.BOTTOM)
+
+frame_old.pack()
 frame_old_top.pack(side=tk.TOP)
 frame_old_bottom.pack(side=tk.BOTTOM)
 frame_old_VWR.pack(side=tk.LEFT)
@@ -231,8 +273,9 @@ frame_old_Fisher.pack(side=tk.LEFT)
 frame_old_Thomas.pack(side=tk.LEFT)
 frame_old_all.pack(side=tk.LEFT)
 
-frame_enrichment.pack(side=tk.RIGHT)
+frame_enrichment.pack()
 frame_new.pack()
+frame_revision.pack()
 frame_enrichment_bottom.pack(side=tk.BOTTOM)
 frame_enrichment_top.pack(side=tk.TOP)
 frame_enrichment_fisher.pack(side=tk.LEFT)
@@ -302,6 +345,13 @@ bt_fill_enrichment = tk.Button(frame_enrichment_top, text='Enrichment Ouputs', c
 bt_fisher_enrichment.pack_forget()
 bt_VWR_enrichment.pack_forget()
 bt_fill_enrichment.pack()
+
+bt_fill_revision = tk.Button(frame_revision_top, text='Fill Revision', command=packRevisionButtons)
+bt_fill_revision_normal = tk.Button(frame_revision_bottom, text='Fill Basic Revision', command=lambda: fillRevision_Normal_Helper(tk.filedialog.askopenfilename()))
+bt_fill_revision_chemicals = tk.Button(frame_revision_bottom, text='Fill Revision Chemicals', command=lambda: fillRevision_Chemicals_Helper(tk.filedialog.askopenfilename()))
+bt_fill_revision.pack()
+bt_fill_revision_chemicals.pack_forget()
+bt_fill_revision_normal.pack_forget()
 
 root.minsize(300, 40)
 root.title('Autofill')
