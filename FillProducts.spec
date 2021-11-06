@@ -6,7 +6,7 @@ block_cipher = None
 
 
 a = Analysis(['FillProducts.py'],
-             pathex=['C:\\Users\\Bob\\Desktop\\Autofill 1.0.2\\FillProducts.py'],
+             pathex=['C:\\Users\\Bob\\OneDrive\\Documents\\Autofill'],
              binaries=[],
              datas = copy_metadata("pycountry"),
              hiddenimports=[],

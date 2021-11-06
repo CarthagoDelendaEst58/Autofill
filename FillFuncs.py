@@ -556,14 +556,10 @@ def fillVWR_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, 
 
 def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, origin, magento_sept):
     thomas = pd.read_excel('forms/thomas_form.xlsx', dtype = object)
-    # thomas.columns = np.arange(len(thomas.columns))
-    # thomas.columns = thomas.iloc[3]
     thomas = columnize(thomas, 4, 3)
     new_columns = [i.strip() if type(i) == str else i for i in thomas.columns]
     thomas.columns = new_columns
     wb = opxl.load_workbook(filename)
-    # wb = opxl.load_workbook('Output for Thomas form.xlsx')
-    # skus = wb['Fisher']
     skus = wb.active
     for i in range(2, skus.max_row+1):
         thomas.loc[i+19, 'MFR. NUMBER'] = str(skus['A'+str(i)].value)
@@ -684,11 +680,14 @@ def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
             
             if type(name) == str:
                 name = tidyDescription(name)
-                if (not (str(pack_size) + str(unit)) in name) and not ((str(pack_size_joined) in name)):
-                    if len(name) > 40-len(str(pack_size_joined)):
-                        name = name[:39-len(pack_size_joined)] + ' ' + pack_size_joined
-                    else:
-                        name = name + ' ' + str(pack_size_joined)
+                if (str(pack_size) + str(unit)) in name:
+                    name = name.replace((str(pack_size) + str(unit)), '')
+                elif str(pack_size_joined) in name:
+                    name = name.replace(str(pack_size_joined), '')
+                if name.endswith(' '):
+                    name = name[:len(name)-1]
+                if name.endswith(','):
+                    name = name[:len(name)-1]
                 if len(name) > 40:
                     name = name[:40]
                 thomas.loc[i, 'INVENTORY DESCRIPTION\n(40 character maximum including spaces)\nMUST include voltage of equipment\nand/or package size to clarify differences amongst products. \nWE CAN NOT ACCEPT DUPLICATE DESCRIPTIONS FOR DIFFERENT PRODUCTS - see Examples Tab'] = name
@@ -778,10 +777,15 @@ def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
             
             if type(name) == str:
                 name = tidyDescription(name)
-                if product_type == 'configurable':
-                    thomas.loc[i, 'WEBSITE DESCRIPTION\n\nThis is a simple line listing description.\ninclude voltage of equipment \nWE CAN NOT ACCEPT DUPLICATE DESCRIPTIONS FOR DIFFERENT PRODUCTS - see Examples Tab'] = name + ' ' + str(pack_size_joined)
-                else:
-                    thomas.loc[i, 'WEBSITE DESCRIPTION\n\nThis is a simple line listing description.\ninclude voltage of equipment \nWE CAN NOT ACCEPT DUPLICATE DESCRIPTIONS FOR DIFFERENT PRODUCTS - see Examples Tab'] = name
+                if (not (str(pack_size) + str(unit)) in name) and not ((str(pack_size_joined) in name)):
+                    # if len(name) > 40-len(str(pack_size_joined)):
+                    #     name = name[:39-len(pack_size_joined)] + ' ' + pack_size_joined
+                    # else:
+                    name = name + ' ' + str(pack_size_joined)
+                # if product_type == 'configurable':
+                #     thomas.loc[i, 'WEBSITE DESCRIPTION\n\nThis is a simple line listing description.\ninclude voltage of equipment \nWE CAN NOT ACCEPT DUPLICATE DESCRIPTIONS FOR DIFFERENT PRODUCTS - see Examples Tab'] = name + ' ' + str(pack_size_joined)
+                # else:
+                thomas.loc[i, 'WEBSITE DESCRIPTION\n\nThis is a simple line listing description.\ninclude voltage of equipment \nWE CAN NOT ACCEPT DUPLICATE DESCRIPTIONS FOR DIFFERENT PRODUCTS - see Examples Tab'] = name
             
             thomas.loc[i, 'If Yes please provide mfr. number or product to group with'] = 'N/A'
 
