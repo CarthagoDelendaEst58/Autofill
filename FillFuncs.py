@@ -883,6 +883,9 @@ def fillThomas_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
     new_thomas.save('outputs/old_product_outputs/old_thomas_output.xlsx')
 
 def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_codes, origin, magento_sept):
+
+    magento_oct = pd.read_excel('database_sheets/magento_oct.xlsx')
+
     fisher_file = pd.ExcelFile('forms/fisher_form.xlsx')
     fisher = pd.read_excel(fisher_file, 'General Info', dtype=object)
     regulatory = pd.read_excel(fisher_file, 'Regulatory', dtype=object)
@@ -890,16 +893,20 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
     regulatory.columns = new_columns
     new_columns = [i.strip() for i in fisher.columns]
     fisher.columns = new_columns
+
     wb = opxl.load_workbook(filename)
-    skus = wb.active
+    skus = wb['Regulatory']
     for i in range(2, skus.max_row+1):
-        regulatory.loc[i-2, 'Supplier Catalog Number'] = str(skus['A'+str(i)].value)
+        regulatory.loc[i-2, 'Supplier Catalog Number'] = str(skus['B'+str(i)].value)
+
+    skus = wb['General Info']
     for i in range(2, skus.max_row+1):
-        fisher.loc[i-2, 'Supplier Catalog Number'] = str(skus['A'+str(i)].value)
+        fisher.loc[i-2, 'Supplier Catalog Number'] = str(skus['B'+str(i)].value)
 
     for i in range(len(regulatory)):
         sku = regulatory['Supplier Catalog Number'][i]
-        product_info = magento.loc[magento['sku'] == sku]
+
+        product_info = magento_oct.loc[magento_oct['sku'] == sku]
         lot_info = lot_master.loc[lot_master['Product number'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
         unspsc_info = unspsc_codes.loc[unspsc_codes['Part Number'] == sku]
@@ -940,18 +947,18 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
             else:
                 unspsc = product_info['unspsc'].values[0]
             
-            short_desc = product_info['short_description'].values[0]
+            # short_desc = product_info['short_description'].values[0]
 
-            quantity = product_info['lk_packaging_facet'].values[0]
+            # quantity = product_info['lk_packaging_facet'].values[0]
             host = product_info['host'].values[0]
-            msds_avail = skus['B'+str(i+1)].value
-            DOT_PSN = 'N/A'
-            hazard_class = product_info['hazard_class'].values[0]
-            biochem_physiol_actions = product_info['biochem_physiol_actions'].values[0]
-            storage_and_handling = product_info['storage_and_handling'].values[0]
-            group_name = product_info['prms_group_name'].values[0]
-            img_link = product_info['base_image'].values[0]
-            keywords = product_info['meta_keywords'].values[0]
+            # msds_avail = skus['B'+str(i+1)].value
+            # DOT_PSN = 'N/A'
+            # hazard_class = product_info['hazard_class'].values[0]
+            # biochem_physiol_actions = product_info['biochem_physiol_actions'].values[0]
+            # storage_and_handling = product_info['storage_and_handling'].values[0]
+            # group_name = product_info['prms_group_name'].values[0]
+            # img_link = product_info['base_image'].values[0]
+            # keywords = product_info['meta_keywords'].values[0]
 
             if type(pack_size) == str:
                 unit = ''.join([i for i in pack_size if not i.isdigit()])
@@ -1020,7 +1027,7 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
 
     for i in range(len(fisher)):
         sku = fisher['Supplier Catalog Number'][i]
-        product_info = magento.loc[magento['sku'] == sku]
+        product_info = magento_oct.loc[magento_oct['sku'] == sku]
         lot_info = lot_master.loc[lot_master['Product number'] == sku]
         prms_info = prms.loc[prms['SKU'] == sku]
         unspsc_info = unspsc_codes.loc[unspsc_codes['Part Number'] == sku]
@@ -1047,13 +1054,14 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                     country_of_origin = pc.country_alpha3_to_country_alpha2(country_of_origin)
                     fisher['Canada Availability'][i] = 'Y'
                     fisher['Currency'][i] = 'USD'
+                    fisher['Country of Origin'][i] = country_of_origin
                 else:
                     fisher['Canada Availability'][i] = 'N'
                 
             else:
                 price = product_info['price'].values[0]
                 packing_group = product_info['packing_group'].values[0]
-                ship_temp = product_info['ship_conditions'].values[0]
+                # ship_temp = product_info['ship_conditions'].values[0]
                 hazard_statements = product_info['hazard_statements'].values[0]
                 
             if not unspsc_info.empty:
@@ -1061,20 +1069,20 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
             else:
                 unspsc = product_info['unspsc'].values[0]
             
-            short_desc = product_info['short_description'].values[0]
-            img_link = product_info['base_image'].values[0]
-            quantity = product_info['lk_packaging_facet'].values[0]
+            # short_desc = product_info['short_description'].values[0]
+            # img_link = product_info['base_image'].values[0]
+            # quantity = product_info['lk_packaging_facet'].values[0]
             host = product_info['host'].values[0]
             tariff_code = product_info['tariff_code'].values[0]
             cas_number = product_info['cas_number'].values[0]
-            DOT_PSN = 'NA'
-            hazard_class = product_info['hazard_class'].values[0]
-            biochem_physiol_actions = product_info['biochem_physiol_actions'].values[0]
-            storage_and_handling = product_info['storage_and_handling'].values[0]
-            group_name = product_info['prms_group_name'].values[0]
-            img_link = product_info['base_image'].values[0]
+            # DOT_PSN = 'NA'
+            # hazard_class = product_info['hazard_class'].values[0]
+            # biochem_physiol_actions = product_info['biochem_physiol_actions'].values[0]
+            # storage_and_handling = product_info['storage_and_handling'].values[0]
+            # group_name = product_info['prms_group_name'].values[0]
+            # img_link = product_info['base_image'].values[0]
             keywords = product_info['meta_keywords'].values[0]
-            storage_temp = product_info['storage_and_handling'].values[0]
+            # storage_temp = product_info['storage_and_handling'].values[0]
             if not new_magento.loc[new_magento['sku'] == sku].empty:
                 weight_in_lb = new_magento.loc[new_magento['sku'] == sku]['weight'].values[0]
                 
@@ -1162,7 +1170,7 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                 fisher['Hazardous'][i] = 'N'
             
             fisher['UN/NA#'][i] = hazard_statements
-            fisher['Hazard Class'][i] = hazard_class
+            # fisher['Hazard Class'][i] = hazard_class
             fisher['Packing Group'][i] = packing_group
 
             fisher['Shelf Life'][i] = 'N'
@@ -1182,7 +1190,6 @@ def fillFisher_Old(filename, magento, new_magento, lot_master, prms, unspsc_code
                     
             fisher['Manufacturer Lead-Time'][i] = '25'
             fisher['Green Product'][i] = 'N'
-            fisher['Country of Origin'][i] = country_of_origin
             fisher['Build to Stock or Build to Order'][i] = 'Build to Order'
             fisher['Serial / Lot Control'][i] = 'NA'
             fisher['Expiration'][i] = 'Y'
